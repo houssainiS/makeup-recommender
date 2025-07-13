@@ -71,6 +71,63 @@ defect_model.eval()
 skin_type_labels = ['dry', 'normal', 'oily']
 skin_defect_labels = ['acne', 'redness', 'bags', 'none']
 
+def advanced_makeup_recommendation(defect_probs, type_probs, defect_labels, type_labels):
+    recommendation = ""
+    main_defect_idx = int(defect_probs.argmax())
+    main_type_idx = int(type_probs.argmax())
+
+    main_defect = defect_labels[main_defect_idx]
+    main_type = type_labels[main_type_idx]
+
+    # -----------------------------
+    # 🔍 SKIN DEFECT ANALYSIS
+    # -----------------------------
+    if defect_probs[main_defect_idx] >= 0.7:
+        recommendation += f"🩺 Main issue: **{main_defect.upper()}** (confident).\n"
+        if main_defect == "acne":
+            recommendation += "👉 Use full acne-control routine with salicylic acid base and matte foundation.\n"
+        elif main_defect == "redness":
+            recommendation += "👉 Apply calming primer and green-tinted concealer.\n"
+        elif main_defect == "bags":
+            recommendation += "👉 Use brightening concealer and cold eye gel before makeup.\n"
+    elif defect_probs[-1] >= 0.6:
+        recommendation += "🩺 Mostly clear skin (None > 60%).\n"
+        recommendation += "👉 Recommend lightweight, natural-look makeup with glow finish.\n"
+    else:
+        # Mixed issues
+        minor = [(defect_labels[i], p) for i, p in enumerate(defect_probs) if 0.2 < p < 0.6 and defect_labels[i] != "none"]
+        if minor:
+            issues_text = ", ".join([f"{d} ({p:.0%})" for d, p in minor])
+            recommendation += f"🩺 Minor skin concerns: {issues_text}\n"
+            recommendation += "👉 Use light corrector only on affected areas.\n"
+        else:
+            recommendation += "🩺 No strong issues detected. Use clean base makeup.\n"
+
+    # -----------------------------
+    # 💧 SKIN TYPE ANALYSIS
+    # -----------------------------
+    if type_probs[main_type_idx] >= 0.75:
+        recommendation += f"💧 Dominant skin type: **{main_type.upper()}**.\n"
+        if main_type == "oily":
+            recommendation += "👉 Use mattifying primer, oil-free foundation, and powder finish.\n"
+        elif main_type == "dry":
+            recommendation += "👉 Use hydrating foundation, creamy concealer, and avoid powders.\n"
+        elif main_type == "normal":
+            recommendation += "👉 Use balanced, natural-look foundation and light primers.\n"
+    elif max(type_probs) - min(type_probs) < 0.25:
+        recommendation += "💧 Skin appears **combination or mixed**.\n"
+        recommendation += "👉 Suggest dual-zone skincare or adaptive foundation (e.g., matte T-zone, hydrating elsewhere).\n"
+    else:
+        recommendation += f"💧 Slightly leaning towards **{main_type}**, but mixed.\n"
+        recommendation += "👉 Use adaptable formulas (e.g., semi-matte or hydrating matte).\n"
+
+    # -----------------------------
+    # 💄 Final wrap-up
+    # -----------------------------
+    recommendation += "\n💄 **Overall Suggestion**: Focus makeup only where needed, use breathable layers, and customize by zone."
+
+    return recommendation
+
 def predict(image: Image.Image) -> dict:
     # Ensure RGB format
     image = image.convert("RGB")
@@ -89,9 +146,13 @@ def predict(image: Image.Image) -> dict:
         type_pred = skin_type_labels[int(type_probs.argmax())]
         defect_pred = skin_defect_labels[int(defect_probs.argmax())]
 
+        # Use advanced recommendation
+        recommendation = advanced_makeup_recommendation(defect_probs, type_probs, skin_defect_labels, skin_type_labels)
+
     return {
         "type_pred": type_pred,
         "defect_pred": defect_pred,
         "type_probs": type_probs.tolist(),
         "defect_probs": defect_probs.tolist(),
+        "recommendation": recommendation,
     }
