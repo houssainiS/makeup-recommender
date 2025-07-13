@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>housBeauty - Your Personal Makeup Assistant</title>
+    <link rel="stylesheet" href="{% load static %}{% static 'css/style.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-magic"></i>
+                <h1>housBeauty</h1>
+            </div>
+            <p class="subtitle">Discover your perfect makeup look with AI-powered recommendations</p>
+        </header>
+
+        <main class="main-content">
+            <!-- Django Template Results (Server-side rendering) -->
+            {% if predicted_type and predicted_defect and recommendation %}
+            <div class="results-section active">
+                <div class="results-header">
+                    <i class="fas fa-brain"></i>
+                    <h2>AI Analysis Complete!</h2>
+                </div>
+                <div class="results-content">
+                    <div class="result-item">
+                        <div class="result-icon">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="result-details">
+                            <h3>Skin Type</h3>
+                            <p class="result-value">{{ predicted_type|title }}</p>
+                        </div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="result-details">
+                            <h3>Skin Analysis</h3>
+                            <p class="result-value">{{ predicted_defect|title }}</p>
+                        </div>
+                    </div>
+                    <div class="recommendation-card">
+                        <div class="recommendation-header">
+                            <i class="fas fa-palette"></i>
+                            <h3>Your Personalized Makeup Recommendation</h3>
+                        </div>
+                        <div class="recommendation-content">
+                            <p>{{ recommendation }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="results-actions">
+                    <button class="btn btn-secondary" onclick="location.reload()">
+                        <i class="fas fa-redo"></i>
+                        Try Another Photo
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- JavaScript Results (AJAX) -->
+            <div class="results-section" id="ajaxResults" style="display:none;">
+                <div class="results-header">
+                    <i class="fas fa-brain"></i>
+                    <h2>AI Analysis Complete!</h2>
+                </div>
+                <div class="results-content">
+                    <div class="result-item">
+                        <div class="result-icon">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="result-details">
+                            <h3>Skin Type</h3>
+                            <p class="result-value" id="skinType"></p>
+                        </div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="result-details">
+                            <h3>Skin Analysis</h3>
+                            <p class="result-value" id="skinDefect"></p>
+                        </div>
+                    </div>
+                    <div class="recommendation-card">
+                        <div class="recommendation-header">
+                            <i class="fas fa-palette"></i>
+                            <h3>Your Personalized Makeup Recommendation</h3>
+                        </div>
+                        <div class="recommendation-content">
+                            <p id="recommendationText"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="results-actions">
+                    <button class="btn btn-secondary" onclick="resetForm()">
+                        <i class="fas fa-redo"></i>
+                        Try Another Photo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Section -->
+            <div class="loading-section" id="loadingSection" style="display:none;">
+                <div class="loading-content">
+                    <div class="loading-spinner">
+                        <i class="fas fa-magic fa-spin"></i>
+                    </div>
+                    <h3>Analyzing Your Photo...</h3>
+                    <p>Our AI is examining your skin and preparing personalized recommendations</p>
+                    <div class="loading-progress">
+                        <div class="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="upload-section">
+                <div class="section-header">
+                    <i class="fas fa-upload"></i>
+                    <h2>Upload Your Photo</h2>
+                    <p>Choose a clear photo of your face for the best recommendations</p>
+                </div>
+                
+                <form id="uploadForm" method="post" enctype="multipart/form-data" action="{% url 'upload_photo' %}">
+                    {% csrf_token %}
+                    <div class="file-input-wrapper">
+                        <input type="file" accept="image/*" id="fileInput" name="photo" required>
+                        <label for="fileInput" class="file-input-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Choose Photo</span>
+                        </label>
+                    </div>
+                    <div class="photo-preview" id="photoPreview"></div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sparkles"></i>
+                        Get Makeup Recommendations
+                    </button>
+                </form>
+            </div>
+
+            <div class="divider">
+                <span>OR</span>
+            </div>
+
+            <div class="camera-section">
+                <div class="section-header">
+                    <i class="fas fa-camera"></i>
+                    <h2>Take a Live Photo</h2>
+                    <p>Use your camera to capture a photo instantly</p>
+                </div>
+
+                <div class="camera-controls">
+                    <button id="startCameraBtn" class="btn btn-secondary">
+                        <i class="fas fa-video"></i>
+                        Start Camera
+                    </button>
+                </div>
+
+                <div class="camera-preview">
+                    <video id="video" autoplay playsinline></video>
+                    <div class="camera-overlay">
+                        <div class="face-guide"></div>
+                    </div>
+                </div>
+
+                <div class="capture-controls">
+                    <button id="captureBtn" class="btn btn-capture" disabled>
+                        <i class="fas fa-camera-retro"></i>
+                        Capture Photo
+                    </button>
+                </div>
+
+                <canvas id="canvas"></canvas>
+                
+                <form id="cameraForm" method="post" enctype="multipart/form-data" action="{% url 'upload_photo' %}" style="display:none;">
+                    {% csrf_token %}
+                    <input type="hidden" name="photo" id="capturedPhoto">
+                </form>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2025 houssaini slimen.</p>
+        </footer>
+    </div>
+
+    <script>
+        const startCameraBtn = document.getElementById('startCameraBtn');
+        const video = document.getElementById('video');
+        const captureBtn = document.getElementById('captureBtn');
+        const canvas = document.getElementById('canvas');
+        const cameraForm = document.getElementById('cameraForm');
+        const capturedPhotoInput = document.getElementById('capturedPhoto');
+        const uploadForm = document.getElementById('uploadForm');
+        const fileInput = document.getElementById('fileInput');
+        const photoPreview = document.getElementById('photoPreview');
+        const loadingSection = document.getElementById('loadingSection');
+        const ajaxResults = document.getElementById('ajaxResults');
+        let stream;
+
+        // File input preview
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    photoPreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                    photoPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // AJAX form submission
+        uploadForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(uploadForm);
+            
+            // Show loading
+            showLoading();
+            
+            try {
+                const response = await fetch("{% url 'upload_photo' %}", {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                // Hide loading
+                hideLoading();
+
+                if (data.error) {
+                    alert("Error: " + data.error);
+                    return;
+                }
+
+                // Show results
+                showResults(data);
+                
+            } catch (err) {
+                hideLoading();
+                alert("Something went wrong: " + err.message);
+            }
+        });
+
+        function showLoading() {
+            loadingSection.style.display = 'block';
+            document.querySelector('.upload-section').style.display = 'none';
+            document.querySelector('.camera-section').style.display = 'none';
+            document.querySelector('.divider').style.display = 'none';
+        }
+
+        function hideLoading() {
+            loadingSection.style.display = 'none';
+        }
+
+        function showResults(data) {
+            document.getElementById("skinType").textContent = data.skin_type || data.predicted_type;
+            document.getElementById("skinDefect").textContent = data.skin_defect || data.predicted_defect;
+            document.getElementById("recommendationText").textContent = data.recommendation;
+            
+            ajaxResults.style.display = 'block';
+            ajaxResults.classList.add('active');
+        }
+
+        function resetForm() {
+            ajaxResults.style.display = 'none';
+            ajaxResults.classList.remove('active');
+            document.querySelector('.upload-section').style.display = 'block';
+            document.querySelector('.camera-section').style.display = 'block';
+            document.querySelector('.divider').style.display = 'block';
+            uploadForm.reset();
+            photoPreview.style.display = 'none';
+            photoPreview.innerHTML = '';
+        }
+
+        // Camera functionality
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'user'
+                    } 
+                });
+                video.srcObject = stream;
+                video.parentElement.style.display = 'block';
+                captureBtn.disabled = false;
+                startCameraBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Camera';
+                startCameraBtn.onclick = stopCamera;
+            } catch (err) {
+                alert('Could not access camera: ' + err.message);
+            }
+        });
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.parentElement.style.display = 'none';
+                captureBtn.disabled = true;
+                startCameraBtn.innerHTML = '<i class="fas fa-video"></i> Start Camera';
+                startCameraBtn.onclick = () => startCameraBtn.click();
+            }
+        }
+
+        captureBtn.addEventListener('click', async () => {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            capturedPhotoInput.value = dataUrl; 
+            
+            // Show loading
+            showLoading();
+            captureBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            captureBtn.disabled = true;
+            
+            // Submit via AJAX instead of form submission
+            const formData = new FormData(cameraForm);
+            
+            try {
+                const response = await fetch("{% url 'upload_photo' %}", {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+                hideLoading();
+
+                if (data.error) {
+                    alert("Error: " + data.error);
+                    return;
+                }
+
+                showResults(data);
+                
+            } catch (err) {
+                hideLoading();
+                alert("Something went wrong: " + err.message);
+            }
+            
+            stopCamera();
+            captureBtn.innerHTML = '<i class="fas fa-camera-retro"></i> Capture Photo';
+        });
+    </script>
+</body>
+</html>
