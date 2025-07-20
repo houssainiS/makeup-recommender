@@ -1,9 +1,13 @@
 import os
+import io
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models, transforms
 from PIL import Image
+
+# Optional: For face detection
+from facenet_pytorch import MTCNN
 
 # ----------------------
 # 📍 Path Setup
@@ -16,6 +20,7 @@ SKIN_DEFECT_MODEL_PATH = os.path.join(BASE_DIR, "skin_disease_resnet18.pth")
 # 🧠 Model Definitions
 # ----------------------
 class SkinCNN(nn.Module):
+    """Custom CNN for skin type classification (3 classes)."""
     def __init__(self):
         super(SkinCNN, self).__init__()
         self.conv = nn.Sequential(
@@ -34,7 +39,7 @@ class SkinCNN(nn.Module):
         return x
 
 # ----------------------
-# 🔁 Transforms
+# 🔁 Image Transforms
 # ----------------------
 transform_type = transforms.Compose([
     transforms.Resize((128, 128)),
@@ -48,29 +53,54 @@ transform_defect = transforms.Compose([
 ])
 
 # ----------------------
-# 🧠 Load Models
+# ⚙️ Load Models
 # ----------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Skin type model (3 classes)
+# Load skin type model
 type_model = SkinCNN()
 type_model.load_state_dict(torch.load(SKIN_TYPE_MODEL_PATH, map_location=device))
 type_model.to(device)
 type_model.eval()
 
-# Skin defect model (4 classes)
+# Load skin defect model (ResNet18)
 defect_model = models.resnet18(weights=None)
 defect_model.fc = nn.Linear(defect_model.fc.in_features, 4)
 defect_model.load_state_dict(torch.load(SKIN_DEFECT_MODEL_PATH, map_location=device))
 defect_model.to(device)
 defect_model.eval()
 
+# Load face detection model (MTCNN)
+mtcnn = MTCNN(keep_all=False, device=device)
+
 # ----------------------
-# 🧪 Prediction Function
+# 🏷️ Class Labels
 # ----------------------
 skin_type_labels = ['dry', 'normal', 'oily']
 skin_defect_labels = ['acne', 'redness', 'bags', 'none']
 
+# ----------------------
+# 📸 Face Detection & Cropping
+# ----------------------
+def detect_and_crop_face(image: Image.Image) -> Image.Image:
+    """
+    Detects face using MTCNN and crops image to face region.
+    Raises ValueError if no face or multiple faces detected.
+    """
+    boxes, _ = mtcnn.detect(image)
+
+    if boxes is None or len(boxes) != 1:
+        raise ValueError("Please upload a clear photo with exactly one face.")
+
+    box = boxes[0]
+    x1, y1, x2, y2 = [int(b) for b in box]
+    face = image.crop((x1, y1, x2, y2))
+
+    return face
+
+# ----------------------
+# 🎨 Makeup Recommendation Logic
+# ----------------------
 def advanced_makeup_recommendation(defect_probs, type_probs, defect_labels, type_labels):
     recommendation = ""
     main_defect_idx = int(defect_probs.argmax())
@@ -79,9 +109,7 @@ def advanced_makeup_recommendation(defect_probs, type_probs, defect_labels, type
     main_defect = defect_labels[main_defect_idx]
     main_type = type_labels[main_type_idx]
 
-    # -----------------------------
-    # 🔍 SKIN DEFECT ANALYSIS
-    # -----------------------------
+    # Analyze skin defect
     if defect_probs[main_defect_idx] >= 0.7:
         recommendation += f"🩺 Main issue: **{main_defect.upper()}** (confident).\n"
         if main_defect == "acne":
@@ -94,8 +122,8 @@ def advanced_makeup_recommendation(defect_probs, type_probs, defect_labels, type
         recommendation += "🩺 Mostly clear skin (None > 60%).\n"
         recommendation += "👉 Recommend lightweight, natural-look makeup with glow finish.\n"
     else:
-        # Mixed issues
-        minor = [(defect_labels[i], p) for i, p in enumerate(defect_probs) if 0.2 < p < 0.6 and defect_labels[i] != "none"]
+        minor = [(defect_labels[i], p) for i, p in enumerate(defect_probs)
+                 if 0.2 < p < 0.6 and defect_labels[i] != "none"]
         if minor:
             issues_text = ", ".join([f"{d} ({p:.0%})" for d, p in minor])
             recommendation += f"🩺 Minor skin concerns: {issues_text}\n"
@@ -103,9 +131,7 @@ def advanced_makeup_recommendation(defect_probs, type_probs, defect_labels, type
         else:
             recommendation += "🩺 No strong issues detected. Use clean base makeup.\n"
 
-    # -----------------------------
-    # 💧 SKIN TYPE ANALYSIS
-    # -----------------------------
+    # Analyze skin type
     if type_probs[main_type_idx] >= 0.75:
         recommendation += f"💧 Dominant skin type: **{main_type.upper()}**.\n"
         if main_type == "oily":
@@ -121,20 +147,33 @@ def advanced_makeup_recommendation(defect_probs, type_probs, defect_labels, type
         recommendation += f"💧 Slightly leaning towards **{main_type}**, but mixed.\n"
         recommendation += "👉 Use adaptable formulas (e.g., semi-matte or hydrating matte).\n"
 
-    # -----------------------------
-    # 💄 Final wrap-up
-    # -----------------------------
     recommendation += "\n💄 **Overall Suggestion**: Focus makeup only where needed, use breathable layers, and customize by zone."
 
     return recommendation
 
+# ----------------------
+# 🔮 Main Prediction Function
+# ----------------------
 def predict(image: Image.Image) -> dict:
-    # Ensure RGB format
+    """
+    Full pipeline:
+    1. Detect and crop face.
+    2. Predict skin type and defect.
+    3. Generate makeup recommendation.
+    4. Return predictions and cropped face or error.
+    """
     image = image.convert("RGB")
 
-    # Apply transforms
-    input_type = transform_type(image).unsqueeze(0).to(device)
-    input_defect = transform_defect(image).unsqueeze(0).to(device)
+    try:
+        # 🔍 Step 1: Detect & crop face
+        face_image = detect_and_crop_face(image)
+    except ValueError as e:
+        # Return an error key in the dict so your view can handle it
+        return {"error": str(e)}
+
+    # 🔄 Step 2: Apply transforms and predict
+    input_type = transform_type(face_image).unsqueeze(0).to(device)
+    input_defect = transform_defect(face_image).unsqueeze(0).to(device)
 
     with torch.no_grad():
         type_out = type_model(input_type)
@@ -146,13 +185,15 @@ def predict(image: Image.Image) -> dict:
         type_pred = skin_type_labels[int(type_probs.argmax())]
         defect_pred = skin_defect_labels[int(defect_probs.argmax())]
 
-        # Use advanced recommendation
-        recommendation = advanced_makeup_recommendation(defect_probs, type_probs, skin_defect_labels, skin_type_labels)
+        recommendation = advanced_makeup_recommendation(defect_probs, type_probs,
+                                                        skin_defect_labels, skin_type_labels)
 
+    # 🔚 Step 3: Return everything (cropped face image included)
     return {
         "type_pred": type_pred,
         "defect_pred": defect_pred,
         "type_probs": type_probs.tolist(),
         "defect_probs": defect_probs.tolist(),
         "recommendation": recommendation,
+        "cropped_face": face_image
     }

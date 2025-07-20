@@ -10,10 +10,12 @@ from recommender.models.ml_model import predict
 def home(request):
     return render(request, "recommender/home.html")
 
+
 @csrf_exempt
 def upload_photo(request):
     if request.method == "POST":
         try:
+            # Load image from file input or base64
             if 'photo' in request.FILES:
                 photo_file = request.FILES['photo']
                 image = Image.open(photo_file).convert('RGB')
@@ -23,18 +25,28 @@ def upload_photo(request):
                 decoded = base64.b64decode(encoded)
                 image = Image.open(io.BytesIO(decoded)).convert('RGB')
 
+            # Predict using models
             preds = predict(image)
+
+            # Check if predict returned an error key (e.g., no face found)
+            if "error" in preds:
+                return JsonResponse({"error": preds["error"]}, status=400)
 
             skin_type = preds['type_pred'].lower()
             skin_defect = preds['defect_pred'].lower()
-
-            # Use recommendation from model directly
             recommendation = preds.get("recommendation", "No recommendation available.")
+
+            # Prepare cropped face image as base64 for frontend display
+            cropped_face = preds.get("cropped_face")
+            buffered = io.BytesIO()
+            cropped_face.save(buffered, format="JPEG")
+            cropped_face_base64 = base64.b64encode(buffered.getvalue()).decode()
 
             return JsonResponse({
                 "skin_type": skin_type.title(),
                 "skin_defect": skin_defect.title(),
-                "recommendation": recommendation
+                "recommendation": recommendation,
+                "cropped_face": f"data:image/jpeg;base64,{cropped_face_base64}"
             })
 
         except Exception as e:

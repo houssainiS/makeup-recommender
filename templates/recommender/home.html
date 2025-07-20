@@ -100,6 +100,12 @@
                     </div>
                 </div>
                 <div class="results-actions">
+                    <!-- Add this inside the AJAX Results section, after recommendations -->
+<div class="cropped-face-section" id="croppedFaceSection" style="display:none; text-align:center; margin: 20px 0;">
+    <h3>Your Detected Face</h3>
+    <img id="croppedFaceImage" src="" alt="Detected Face" style="max-width: 200px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.2);">
+</div>
+
                     <button class="btn btn-secondary" onclick="resetForm()">
                         <i class="fas fa-redo"></i>
                         Try Another Photo
@@ -267,13 +273,22 @@
         }
 
         function showResults(data) {
-            document.getElementById("skinType").textContent = data.skin_type || data.predicted_type;
-            document.getElementById("skinDefect").textContent = data.skin_defect || data.predicted_defect;
-            document.getElementById("recommendationText").textContent = data.recommendation;
-            
-            ajaxResults.style.display = 'block';
-            ajaxResults.classList.add('active');
-        }
+    document.getElementById("skinType").textContent = data.skin_type || data.predicted_type;
+    document.getElementById("skinDefect").textContent = data.skin_defect || data.predicted_defect;
+    document.getElementById("recommendationText").textContent = data.recommendation;
+
+    // Show cropped face if available
+    if (data.cropped_face) {
+        const croppedFaceSection = document.getElementById('croppedFaceSection');
+        const croppedFaceImage = document.getElementById('croppedFaceImage');
+        croppedFaceImage.src = data.cropped_face;
+        croppedFaceSection.style.display = 'block';
+    }
+
+    ajaxResults.style.display = 'block';
+    ajaxResults.classList.add('active');
+}
+
 
         function resetForm() {
             ajaxResults.style.display = 'none';
