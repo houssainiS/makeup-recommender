@@ -227,251 +227,243 @@
         </footer>
     </div>
 
-    <script>
-        const startCameraBtn = document.getElementById('startCameraBtn');
-        const video = document.getElementById('video');
-        const captureBtn = document.getElementById('captureBtn');
-        const canvas = document.getElementById('canvas');
-        const cameraForm = document.getElementById('cameraForm');
-        const capturedPhotoInput = document.getElementById('capturedPhoto');
-        const uploadForm = document.getElementById('uploadForm');
-        const fileInput = document.getElementById('fileInput');
-        const photoPreview = document.getElementById('photoPreview');
-        const loadingSection = document.getElementById('loadingSection');
-        const ajaxResults = document.getElementById('ajaxResults');
-        let stream;
+   <script>
+    const startCameraBtn = document.getElementById('startCameraBtn');
+    const video = document.getElementById('video');
+    const captureBtn = document.getElementById('captureBtn');
+    const canvas = document.getElementById('canvas');
+    const cameraForm = document.getElementById('cameraForm');
+    const capturedPhotoInput = document.getElementById('capturedPhoto');
+    const uploadForm = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('fileInput');
+    const photoPreview = document.getElementById('photoPreview');
+    const loadingSection = document.getElementById('loadingSection');
+    const ajaxResults = document.getElementById('ajaxResults');
+    let stream;
 
-        // File input preview
-        fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    photoPreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-                    photoPreview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+    // File input preview
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                photoPreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                photoPreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 
-        // AJAX form submission
-        uploadForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
+    // AJAX form submission for upload form
+    uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
 
-            const formData = new FormData(uploadForm);
-            
-            // Show loading
-            showLoading();
-            
-            try {
-                const response = await fetch("{% url 'upload_photo' %}", {
-                    method: "POST",
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
+        const formData = new FormData(uploadForm);
 
-                const data = await response.json();
+        showLoading();
 
-                // Hide loading
-                hideLoading();
-
-                if (data.error) {
-                    alert("Error: " + data.error);
-                    return;
+        try {
+            const response = await fetch("{% url 'upload_photo' %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
-
-                // Show results
-                showResults(data);
-                
-            } catch (err) {
-                hideLoading();
-                alert("Something went wrong: " + err.message);
-            }
-        });
-
-        function showLoading() {
-            loadingSection.style.display = 'block';
-            document.querySelector('.upload-section').style.display = 'none';
-            document.querySelector('.camera-section').style.display = 'none';
-            document.querySelector('.divider').style.display = 'none';
-        }
-
-        function hideLoading() {
-            loadingSection.style.display = 'none';
-        }
-
-        // Helper to create horizontal probability bars
-        function createProbBars(containerId, labels, probs, colors) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-
-            probs.forEach((p, i) => {
-                const barWrapper = document.createElement('div');
-                barWrapper.classList.add('prob-bar-wrapper');
-
-                const barInfo = document.createElement('div');
-                barInfo.classList.add('prob-bar-info');
-
-                const label = document.createElement('span');
-                label.classList.add('prob-bar-label');
-                label.textContent = labels[i];
-
-                const value = document.createElement('span');
-                value.classList.add('prob-bar-value');
-                value.textContent = (p * 100).toFixed(1) + '%';
-
-                barInfo.appendChild(label);
-                barInfo.appendChild(value);
-
-                const barContainer = document.createElement('div');
-                barContainer.classList.add('prob-bar');
-
-                const fill = document.createElement('div');
-                fill.classList.add('prob-bar-fill');
-                fill.style.width = (p * 100) + '%';
-                fill.style.backgroundColor = colors[i] || colors[0];
-
-                barContainer.appendChild(fill);
-                barWrapper.appendChild(barInfo);
-                barWrapper.appendChild(barContainer);
-                container.appendChild(barWrapper);
             });
+
+            const data = await response.json();
+
+            hideLoading();
+
+            if (data.error) {
+                alert("Error: " + data.error);
+                return;
+            }
+
+            showResults(data);
+
+        } catch (err) {
+            hideLoading();
+            alert("Something went wrong: " + err.message);
+        }
+    });
+
+    function showLoading() {
+        loadingSection.style.display = 'block';
+        document.querySelector('.upload-section').style.display = 'none';
+        document.querySelector('.camera-section').style.display = 'none';
+        document.querySelector('.divider').style.display = 'none';
+    }
+
+    function hideLoading() {
+        loadingSection.style.display = 'none';
+    }
+
+    // Helper to create horizontal probability bars
+    function createProbBars(containerId, labels, probs, colors) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        probs.forEach((p, i) => {
+            const barWrapper = document.createElement('div');
+            barWrapper.classList.add('prob-bar-wrapper');
+
+            const barInfo = document.createElement('div');
+            barInfo.classList.add('prob-bar-info');
+
+            const label = document.createElement('span');
+            label.classList.add('prob-bar-label');
+            label.textContent = labels[i];
+
+            const value = document.createElement('span');
+            value.classList.add('prob-bar-value');
+            value.textContent = (p * 100).toFixed(1) + '%';
+
+            barInfo.appendChild(label);
+            barInfo.appendChild(value);
+
+            const barContainer = document.createElement('div');
+            barContainer.classList.add('prob-bar');
+
+            const fill = document.createElement('div');
+            fill.classList.add('prob-bar-fill');
+            fill.style.width = (p * 100) + '%';
+            fill.style.backgroundColor = colors[i] || colors[0];
+
+            barContainer.appendChild(fill);
+            barWrapper.appendChild(barInfo);
+            barWrapper.appendChild(barContainer);
+            container.appendChild(barWrapper);
+        });
+    }
+
+    function showResults(data) {
+        document.getElementById("skinType").textContent = data.skin_type || data.predicted_type;
+        document.getElementById("skinDefect").textContent = data.skin_defect || data.predicted_defect;
+        document.getElementById("recommendationText").textContent = data.recommendation;
+
+        // Show cropped face if available
+        if (data.cropped_face) {
+            const croppedFaceSection = document.getElementById('croppedFaceSection');
+            const croppedFaceImage = document.getElementById('croppedFaceImage');
+            croppedFaceImage.src = data.cropped_face;
+            croppedFaceSection.style.display = 'block';
         }
 
-        function showResults(data) {
-            document.getElementById("skinType").textContent = data.skin_type || data.predicted_type;
-            document.getElementById("skinDefect").textContent = data.skin_defect || data.predicted_defect;
-            document.getElementById("recommendationText").textContent = data.recommendation;
+        const skinDefectLabels = ['Acne', 'Redness', 'Bags', 'None'];
+        const skinTypeLabels = ['Dry', 'Normal', 'Oily'];
 
-            // Show cropped face if available
-            if (data.cropped_face) {
-                const croppedFaceSection = document.getElementById('croppedFaceSection');
-                const croppedFaceImage = document.getElementById('croppedFaceImage');
-                croppedFaceImage.src = data.cropped_face;
-                croppedFaceSection.style.display = 'block';
-            }
+        const defectColors = ['#ff6b6b', '#ff8a65', '#ffb74d', '#81c784'];
+        const typeColors = ['#64b5f6', '#4fc3f7', '#4dd0e1'];
 
-            // Skin defect and type labels (must match backend)
-            const skinDefectLabels = ['Acne', 'Redness', 'Bags', 'None'];
-            const skinTypeLabels = ['Dry', 'Normal', 'Oily'];
-            
-            // Color schemes for different categories
-            const defectColors = ['#ff6b6b', '#ff8a65', '#ffb74d', '#81c784'];
-            const typeColors = ['#64b5f6', '#4fc3f7', '#4dd0e1'];
-
-            // Show skin type probabilities
-            if (data.type_probs && data.type_probs.length === skinTypeLabels.length) {
-                document.getElementById('typeProbsSection').style.display = 'block';
-                createProbBars('typeProbsBars', skinTypeLabels, data.type_probs, typeColors);
-            } else {
-                document.getElementById('typeProbsSection').style.display = 'none';
-            }
-
-            // Show skin defect probabilities
-            if (data.defect_probs && data.defect_probs.length === skinDefectLabels.length) {
-                document.getElementById('defectProbsSection').style.display = 'block';
-                createProbBars('defectProbsBars', skinDefectLabels, data.defect_probs, defectColors);
-            } else {
-                document.getElementById('defectProbsSection').style.display = 'none';
-            }
-
-            ajaxResults.style.display = 'block';
-            ajaxResults.classList.add('active');
-        }
-
-        function resetForm() {
-            ajaxResults.style.display = 'none';
-            ajaxResults.classList.remove('active');
-            document.querySelector('.upload-section').style.display = 'block';
-            document.querySelector('.camera-section').style.display = 'block';
-            document.querySelector('.divider').style.display = 'block';
-            uploadForm.reset();
-            photoPreview.style.display = 'none';
-            photoPreview.innerHTML = '';
-
-            // Hide all analysis sections on reset
-            document.getElementById('defectProbsSection').style.display = 'none';
+        if (data.type_probs && data.type_probs.length === skinTypeLabels.length) {
+            document.getElementById('typeProbsSection').style.display = 'block';
+            createProbBars('typeProbsBars', skinTypeLabels, data.type_probs, typeColors);
+        } else {
             document.getElementById('typeProbsSection').style.display = 'none';
-            document.getElementById('croppedFaceSection').style.display = 'none';
         }
 
-        // Camera functionality
-        startCameraBtn.addEventListener('click', async () => {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        width: { ideal: 640 },
-                        height: { ideal: 480 },
-                        facingMode: 'user'
-                    } 
-                });
-                video.srcObject = stream;
-                video.parentElement.style.display = 'block';
-                captureBtn.disabled = false;
-                startCameraBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Camera';
-                startCameraBtn.onclick = stopCamera;
-            } catch (err) {
-                alert('Could not access camera: ' + err.message);
-            }
-        });
-
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                video.parentElement.style.display = 'none';
-                captureBtn.disabled = true;
-                startCameraBtn.innerHTML = '<i class="fas fa-video"></i> Start Camera';
-                startCameraBtn.onclick = () => startCameraBtn.click();
-            }
+        if (data.defect_probs && data.defect_probs.length === skinDefectLabels.length) {
+            document.getElementById('defectProbsSection').style.display = 'block';
+            createProbBars('defectProbsBars', skinDefectLabels, data.defect_probs, defectColors);
+        } else {
+            document.getElementById('defectProbsSection').style.display = 'none';
         }
 
-        captureBtn.addEventListener('click', async () => {
-            const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            capturedPhotoInput.value = dataUrl.split(',')[1];
-            
-            // Show loading
-            showLoading();
-            captureBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-            captureBtn.disabled = true;
-            
-            // Submit via AJAX instead of form submission
-            const formData = new FormData(cameraForm);
-            
-            try {
-                const response = await fetch("{% url 'upload_photo' %}", {
-                    method: "POST",
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
+        ajaxResults.style.display = 'block';
+        ajaxResults.classList.add('active');
+    }
 
-                const data = await response.json();
-                hideLoading();
+    function resetForm() {
+        ajaxResults.style.display = 'none';
+        ajaxResults.classList.remove('active');
+        document.querySelector('.upload-section').style.display = 'block';
+        document.querySelector('.camera-section').style.display = 'block';
+        document.querySelector('.divider').style.display = 'block';
+        uploadForm.reset();
+        photoPreview.style.display = 'none';
+        photoPreview.innerHTML = '';
 
-                if (data.error) {
-                    alert("Error: " + data.error);
-                    return;
+        document.getElementById('defectProbsSection').style.display = 'none';
+        document.getElementById('typeProbsSection').style.display = 'none';
+        document.getElementById('croppedFaceSection').style.display = 'none';
+    }
+
+    // Camera functionality
+    startCameraBtn.addEventListener('click', async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: 'user'
                 }
-
-                showResults(data);
-                
-            } catch (err) {
-                hideLoading();
-                alert("Something went wrong: " + err.message);
-            }
-            
-            stopCamera();
-            captureBtn.innerHTML = '<i class="fas fa-camera-retro"></i> Capture Photo';
+            });
+            video.srcObject = stream;
+            video.parentElement.style.display = 'block';
             captureBtn.disabled = false;
-        });
-    </script>
+            startCameraBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Camera';
+            startCameraBtn.onclick = stopCamera;
+        } catch (err) {
+            alert('Could not access camera: ' + err.message);
+        }
+    });
+
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            video.parentElement.style.display = 'none';
+            captureBtn.disabled = true;
+            startCameraBtn.innerHTML = '<i class="fas fa-video"></i> Start Camera';
+            startCameraBtn.onclick = () => startCameraBtn.click();
+        }
+    }
+
+    captureBtn.addEventListener('click', async () => {
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Send full data URL (with prefix) so backend can split it safely
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        capturedPhotoInput.value = dataUrl;
+
+        showLoading();
+        captureBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        captureBtn.disabled = true;
+
+        const formData = new FormData(cameraForm);
+
+        try {
+            const response = await fetch("{% url 'upload_photo' %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+            hideLoading();
+
+            if (data.error) {
+                alert("Error: " + data.error);
+                return;
+            }
+
+            showResults(data);
+
+        } catch (err) {
+            hideLoading();
+            alert("Something went wrong: " + err.message);
+        }
+
+        stopCamera();
+        captureBtn.innerHTML = '<i class="fas fa-camera-retro"></i> Capture Photo';
+        captureBtn.disabled = false;
+    });
+</script>
+
 </body>
 </html>
