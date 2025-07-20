@@ -114,6 +114,55 @@ body {
   margin-bottom: 5px;
 }
 
+/* Cropped Face Section */
+.cropped-face-section {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(45deg, rgba(255, 107, 107, 0.05), rgba(255, 159, 243, 0.05));
+  border-radius: 15px;
+  border: 1px solid rgba(255, 107, 107, 0.1);
+}
+
+.face-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.face-frame {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid #ff6b6b;
+  box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
+  background: white;
+}
+
+.face-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+
+
+.face-display h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.face-display p {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+}
+
 .results-content {
   display: flex;
   flex-direction: column;
@@ -155,6 +204,107 @@ body {
   font-weight: 500;
   color: #ff6b6b;
   text-transform: capitalize;
+}
+
+/* Analysis Statistics */
+.analysis-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.probabilities-section {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 1.5rem;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 107, 107, 0.1);
+}
+
+.prob-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid rgba(255, 107, 107, 0.1);
+}
+
+.prob-header i {
+  font-size: 1.2rem;
+  color: #ff6b6b;
+}
+
+.prob-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.prob-bars-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.prob-bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.prob-bar-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.prob-bar-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.prob-bar-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #666;
+}
+
+.prob-bar {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.prob-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease-in-out;
+  position: relative;
+}
+
+.prob-bar-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .recommendation-card {
@@ -529,6 +679,19 @@ body {
   }
 
   .recommendation-card {
+    padding: 1rem;
+  }
+
+  .face-frame {
+    width: 120px;
+    height: 120px;
+  }
+
+  .analysis-stats {
+    gap: 1rem;
+  }
+
+  .probabilities-section {
     padding: 1rem;
   }
 }

@@ -70,6 +70,19 @@
                     <i class="fas fa-brain"></i>
                     <h2>AI Analysis Complete!</h2>
                 </div>
+                
+                <!-- Cropped Face Section -->
+                <div class="cropped-face-section" id="croppedFaceSection" style="display:none;">
+                    <div class="face-display">
+                        <div class="face-frame">
+                            <img id="croppedFaceImage" src="/placeholder.svg" alt="Detected Face">
+                            
+                        </div>
+                        <h3>Face Detected Successfully</h3>
+                        <p>AI has identified and analyzed your facial features</p>
+                    </div>
+                </div>
+
                 <div class="results-content">
                     <div class="result-item">
                         <div class="result-icon">
@@ -89,6 +102,28 @@
                             <p class="result-value" id="skinDefect"></p>
                         </div>
                     </div>
+
+                    <!-- Skin Analysis Statistics -->
+                    <div class="analysis-stats">
+                        <!-- Skin Type Probabilities -->
+                        <div class="probabilities-section" id="typeProbsSection" style="display:none;">
+                            <div class="prob-header">
+                                <i class="fas fa-chart-bar"></i>
+                                <h3>Skin Type Analysis</h3>
+                            </div>
+                            <div class="prob-bars-container" id="typeProbsBars"></div>
+                        </div>
+
+                        <!-- Skin Defect Probabilities -->
+                        <div class="probabilities-section" id="defectProbsSection" style="display:none;">
+                            <div class="prob-header">
+                                <i class="fas fa-microscope"></i>
+                                <h3>Skin Condition Analysis</h3>
+                            </div>
+                            <div class="prob-bars-container" id="defectProbsBars"></div>
+                        </div>
+                    </div>
+
                     <div class="recommendation-card">
                         <div class="recommendation-header">
                             <i class="fas fa-palette"></i>
@@ -99,13 +134,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="results-actions">
-                    <!-- Add this inside the AJAX Results section, after recommendations -->
-<div class="cropped-face-section" id="croppedFaceSection" style="display:none; text-align:center; margin: 20px 0;">
-    <h3>Your Detected Face</h3>
-    <img id="croppedFaceImage" src="" alt="Detected Face" style="max-width: 200px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.2);">
-</div>
 
+                <div class="results-actions">
                     <button class="btn btn-secondary" onclick="resetForm()">
                         <i class="fas fa-redo"></i>
                         Try Another Photo
@@ -272,23 +302,84 @@
             loadingSection.style.display = 'none';
         }
 
+        // Helper to create horizontal probability bars
+        function createProbBars(containerId, labels, probs, colors) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            probs.forEach((p, i) => {
+                const barWrapper = document.createElement('div');
+                barWrapper.classList.add('prob-bar-wrapper');
+
+                const barInfo = document.createElement('div');
+                barInfo.classList.add('prob-bar-info');
+
+                const label = document.createElement('span');
+                label.classList.add('prob-bar-label');
+                label.textContent = labels[i];
+
+                const value = document.createElement('span');
+                value.classList.add('prob-bar-value');
+                value.textContent = (p * 100).toFixed(1) + '%';
+
+                barInfo.appendChild(label);
+                barInfo.appendChild(value);
+
+                const barContainer = document.createElement('div');
+                barContainer.classList.add('prob-bar');
+
+                const fill = document.createElement('div');
+                fill.classList.add('prob-bar-fill');
+                fill.style.width = (p * 100) + '%';
+                fill.style.backgroundColor = colors[i] || colors[0];
+
+                barContainer.appendChild(fill);
+                barWrapper.appendChild(barInfo);
+                barWrapper.appendChild(barContainer);
+                container.appendChild(barWrapper);
+            });
+        }
+
         function showResults(data) {
-    document.getElementById("skinType").textContent = data.skin_type || data.predicted_type;
-    document.getElementById("skinDefect").textContent = data.skin_defect || data.predicted_defect;
-    document.getElementById("recommendationText").textContent = data.recommendation;
+            document.getElementById("skinType").textContent = data.skin_type || data.predicted_type;
+            document.getElementById("skinDefect").textContent = data.skin_defect || data.predicted_defect;
+            document.getElementById("recommendationText").textContent = data.recommendation;
 
-    // Show cropped face if available
-    if (data.cropped_face) {
-        const croppedFaceSection = document.getElementById('croppedFaceSection');
-        const croppedFaceImage = document.getElementById('croppedFaceImage');
-        croppedFaceImage.src = data.cropped_face;
-        croppedFaceSection.style.display = 'block';
-    }
+            // Show cropped face if available
+            if (data.cropped_face) {
+                const croppedFaceSection = document.getElementById('croppedFaceSection');
+                const croppedFaceImage = document.getElementById('croppedFaceImage');
+                croppedFaceImage.src = data.cropped_face;
+                croppedFaceSection.style.display = 'block';
+            }
 
-    ajaxResults.style.display = 'block';
-    ajaxResults.classList.add('active');
-}
+            // Skin defect and type labels (must match backend)
+            const skinDefectLabels = ['Acne', 'Redness', 'Bags', 'None'];
+            const skinTypeLabels = ['Dry', 'Normal', 'Oily'];
+            
+            // Color schemes for different categories
+            const defectColors = ['#ff6b6b', '#ff8a65', '#ffb74d', '#81c784'];
+            const typeColors = ['#64b5f6', '#4fc3f7', '#4dd0e1'];
 
+            // Show skin type probabilities
+            if (data.type_probs && data.type_probs.length === skinTypeLabels.length) {
+                document.getElementById('typeProbsSection').style.display = 'block';
+                createProbBars('typeProbsBars', skinTypeLabels, data.type_probs, typeColors);
+            } else {
+                document.getElementById('typeProbsSection').style.display = 'none';
+            }
+
+            // Show skin defect probabilities
+            if (data.defect_probs && data.defect_probs.length === skinDefectLabels.length) {
+                document.getElementById('defectProbsSection').style.display = 'block';
+                createProbBars('defectProbsBars', skinDefectLabels, data.defect_probs, defectColors);
+            } else {
+                document.getElementById('defectProbsSection').style.display = 'none';
+            }
+
+            ajaxResults.style.display = 'block';
+            ajaxResults.classList.add('active');
+        }
 
         function resetForm() {
             ajaxResults.style.display = 'none';
@@ -299,6 +390,11 @@
             uploadForm.reset();
             photoPreview.style.display = 'none';
             photoPreview.innerHTML = '';
+
+            // Hide all analysis sections on reset
+            document.getElementById('defectProbsSection').style.display = 'none';
+            document.getElementById('typeProbsSection').style.display = 'none';
+            document.getElementById('croppedFaceSection').style.display = 'none';
         }
 
         // Camera functionality
@@ -338,7 +434,7 @@
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             
             const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            capturedPhotoInput.value = dataUrl; 
+            capturedPhotoInput.value = dataUrl.split(',')[1];
             
             // Show loading
             showLoading();
@@ -374,6 +470,7 @@
             
             stopCamera();
             captureBtn.innerHTML = '<i class="fas fa-camera-retro"></i> Capture Photo';
+            captureBtn.disabled = false;
         });
     </script>
 </body>

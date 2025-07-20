@@ -46,7 +46,9 @@ def upload_photo(request):
                 "skin_type": skin_type.title(),
                 "skin_defect": skin_defect.title(),
                 "recommendation": recommendation,
-                "cropped_face": f"data:image/jpeg;base64,{cropped_face_base64}"
+                "cropped_face": f"data:image/jpeg;base64,{cropped_face_base64}",
+                "type_probs": preds.get("type_probs", []),       # Added probabilities
+                "defect_probs": preds.get("defect_probs", []),   # Added probabilities
             })
 
         except Exception as e:
