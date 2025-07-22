@@ -114,7 +114,7 @@ body {
   margin-bottom: 5px;
 }
 
-/* Cropped Face Section */
+/* Cropped Face Section - Updated to Square */
 .cropped-face-section {
   text-align: center;
   margin-bottom: 2rem;
@@ -133,13 +133,16 @@ body {
 
 .face-frame {
   position: relative;
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
+  width: 200px;
+  height: 200px;
   overflow: hidden;
   border: 4px solid #ff6b6b;
   box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
   background: white;
+}
+
+.face-frame.square {
+  border-radius: 15px; /* Rounded square instead of circle */
 }
 
 .face-frame img {
@@ -148,7 +151,22 @@ body {
   object-fit: cover;
 }
 
-
+.face-overlay {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  width: 35px;
+  height: 35px;
+  background: linear-gradient(45deg, #4caf50, #45a049);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1rem;
+  border: 3px solid white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
 
 .face-display h3 {
   font-size: 1.2rem;
@@ -161,6 +179,82 @@ body {
   font-size: 0.9rem;
   color: #666;
   margin: 0;
+}
+
+/* YOLO Detection Section */
+.yolo-detection-section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: linear-gradient(45deg, rgba(0, 255, 0, 0.05), rgba(0, 200, 0, 0.05));
+  border-radius: 15px;
+  border: 1px solid rgba(0, 255, 0, 0.2);
+}
+
+.detection-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.detection-header i {
+  font-size: 2rem;
+  color: #00cc00;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.detection-header h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.detection-header p {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+}
+
+.canvas-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+#yoloCanvas {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(0, 255, 0, 0.3);
+  background: white;
+}
+
+.detection-legend {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 .results-content {
@@ -683,16 +777,30 @@ body {
   }
 
   .face-frame {
-    width: 120px;
-    height: 120px;
+    width: 160px;
+    height: 160px;
   }
 
   .analysis-stats {
     gap: 1rem;
   }
 
-  .probabilities-section {
+  .probabilities-section,
+  .yolo-detection-section {
     padding: 1rem;
+  }
+
+  #yoloCanvas {
+    max-width: 100%;
+  }
+
+  .detection-legend {
+    gap: 0.5rem;
+  }
+
+  .legend-item {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.8rem;
   }
 }
 

@@ -6,6 +6,8 @@ import base64
 import io
 
 from recommender.models.ml_model import predict
+from recommender.models.yolo_model import detect_skin_defects_yolo
+
 
 def home(request):
     return render(request, "recommender/home.html")
@@ -15,7 +17,7 @@ def home(request):
 def upload_photo(request):
     if request.method == "POST":
         try:
-            # Load image from file input or base64
+            # Load image from uploaded file or base64 string
             if 'photo' in request.FILES:
                 photo_file = request.FILES['photo']
                 image = Image.open(photo_file).convert('RGB')
@@ -25,10 +27,8 @@ def upload_photo(request):
                 decoded = base64.b64decode(encoded)
                 image = Image.open(io.BytesIO(decoded)).convert('RGB')
 
-            # Predict using models
+            # Run your original classifier
             preds = predict(image)
-
-            # Check if predict returned an error key (e.g., no face found)
             if "error" in preds:
                 return JsonResponse({"error": preds["error"]}, status=400)
 
@@ -36,19 +36,29 @@ def upload_photo(request):
             skin_defect = preds['defect_pred'].lower()
             recommendation = preds.get("recommendation", "No recommendation available.")
 
-            # Prepare cropped face image as base64 for frontend display
+            # Prepare cropped face image base64 (original from classifier)
             cropped_face = preds.get("cropped_face")
             buffered = io.BytesIO()
             cropped_face.save(buffered, format="JPEG")
             cropped_face_base64 = base64.b64encode(buffered.getvalue()).decode()
 
+            # Run YOLO on cropped face, get detections and annotated image with boxes
+            yolo_boxes, yolo_annotated_image = detect_skin_defects_yolo(cropped_face)
+
+            # Convert annotated image to base64
+            buffered_annot = io.BytesIO()
+            yolo_annotated_image.save(buffered_annot, format="JPEG")
+            yolo_annotated_base64 = base64.b64encode(buffered_annot.getvalue()).decode()
+
             return JsonResponse({
                 "skin_type": skin_type.title(),
                 "skin_defect": skin_defect.title(),
                 "recommendation": recommendation,
-                "cropped_face": f"data:image/jpeg;base64,{cropped_face_base64}",
-                "type_probs": preds.get("type_probs", []),       # Added probabilities
-                "defect_probs": preds.get("defect_probs", []),   # Added probabilities
+                "cropped_face": f"data:image/jpeg;base64,{cropped_face_base64}",  # original cropped face
+                "type_probs": preds.get("type_probs", []),
+                "defect_probs": preds.get("defect_probs", []),
+                "yolo_boxes": yolo_boxes,
+                "yolo_annotated": f"data:image/jpeg;base64,{yolo_annotated_base64}"  # cropped face with boxes
             })
 
         except Exception as e:
