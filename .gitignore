@@ -12,3 +12,6 @@ __pycache__/
 # Virtualenv
 venv/
 .env/
+
+#big models 
+recommender/models/best.pt
