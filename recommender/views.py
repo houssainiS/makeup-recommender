@@ -34,7 +34,6 @@ def upload_photo(request):
 
             skin_type = preds['type_pred'].lower()
             skin_defect = preds['defect_pred'].lower()
-            recommendation = preds.get("recommendation", "No recommendation available.")
 
             # Prepare cropped face image base64 (original from classifier)
             cropped_face = preds.get("cropped_face")
@@ -53,7 +52,6 @@ def upload_photo(request):
             return JsonResponse({
                 "skin_type": skin_type.title(),
                 "skin_defect": skin_defect.title(),
-                "recommendation": recommendation,
                 "cropped_face": f"data:image/jpeg;base64,{cropped_face_base64}",  # original cropped face
                 "type_probs": preds.get("type_probs", []),
                 "defect_probs": preds.get("defect_probs", []),

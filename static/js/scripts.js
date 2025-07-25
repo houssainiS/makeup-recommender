@@ -90,7 +90,6 @@
         function showResults(data) {
             document.getElementById("skinType").textContent = data.skin_type || data.predicted_type;
             document.getElementById("skinDefect").textContent = data.skin_defect || data.predicted_defect;
-            document.getElementById("recommendationText").textContent = data.recommendation;
 
             if (data.cropped_face) {
                 const croppedFaceSection = document.getElementById('croppedFaceSection');
