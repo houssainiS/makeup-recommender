@@ -1,13 +1,12 @@
 import os
-import io
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models, transforms
 from PIL import Image
 
-# Optional: For face detection
-from facenet_pytorch import MTCNN
+# Import the face detection/cropping function from your new file
+from recommender.models.facemesh_model import detect_and_crop_face
 
 # ----------------------
 # 📍 Path Setup
@@ -70,33 +69,11 @@ defect_model.load_state_dict(torch.load(SKIN_DEFECT_MODEL_PATH, map_location=dev
 defect_model.to(device)
 defect_model.eval()
 
-# Load face detection model (MTCNN)
-mtcnn = MTCNN(keep_all=False, device=device)
-
 # ----------------------
 # 🏷️ Class Labels
 # ----------------------
 skin_type_labels = ['dry', 'normal', 'oily']
 skin_defect_labels = ['acne', 'redness', 'bags', 'none']
-
-# ----------------------
-# 📸 Face Detection & Cropping
-# ----------------------
-def detect_and_crop_face(image: Image.Image) -> Image.Image:
-    """
-    Detects face using MTCNN and crops image to face region.
-    Raises ValueError if no face or multiple faces detected.
-    """
-    boxes, _ = mtcnn.detect(image)
-
-    if boxes is None or len(boxes) != 1:
-        raise ValueError("Please upload a clear photo with exactly one face.")
-
-    box = boxes[0]
-    x1, y1, x2, y2 = [int(b) for b in box]
-    face = image.crop((x1, y1, x2, y2))
-
-    return face
 
 # ----------------------
 # 🎨 Makeup Recommendation Logic
@@ -165,7 +142,7 @@ def predict(image: Image.Image) -> dict:
     image = image.convert("RGB")
 
     try:
-        # 🔍 Step 1: Detect & crop face
+        # 🔍 Step 1: Detect & crop face using the imported function
         face_image = detect_and_crop_face(image)
     except ValueError as e:
         # Return an error key in the dict so your view can handle it
