@@ -1,22 +1,43 @@
+import cv2
+import numpy as np
 from PIL import Image
-from facenet_pytorch import MTCNN
-import torch
+import mediapipe as mp
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-mtcnn = MTCNN(keep_all=False, device=device)
+mp_face_mesh = mp.solutions.face_mesh
 
-def detect_and_crop_face(image: Image.Image) -> Image.Image:
+def detect_and_crop_face(pil_image: Image.Image) -> Image.Image:
     """
-    Detects face using MTCNN and crops image to face region.
+    Detect face using MediaPipe Face Mesh, crop tight face box, return PIL image.
     Raises ValueError if no face or multiple faces detected.
     """
-    boxes, _ = mtcnn.detect(image)
+    image = np.array(pil_image.convert("RGB"))
+    h, w, _ = image.shape
 
-    if boxes is None or len(boxes) != 1:
-        raise ValueError("Please upload a clear photo with exactly one face.")
+    with mp_face_mesh.FaceMesh(
+        static_image_mode=True,
+        max_num_faces=1,
+        refine_landmarks=True,
+        min_detection_confidence=0.5
+    ) as face_mesh:
 
-    box = boxes[0]
-    x1, y1, x2, y2 = [int(b) for b in box]
-    face = image.crop((x1, y1, x2, y2))
+        results = face_mesh.process(image)
 
-    return face
+        if not results.multi_face_landmarks or len(results.multi_face_landmarks) != 1:
+            raise ValueError("Please upload a clear photo with exactly one face.")
+
+        landmarks = results.multi_face_landmarks[0].landmark
+
+        # Extract all landmark points x and y in pixels
+        xs = [int(lm.x * w) for lm in landmarks]
+        ys = [int(lm.y * h) for lm in landmarks]
+
+        # Get bounding box of landmarks with a margin
+        x_min, x_max = max(min(xs) - 20, 0), min(max(xs) + 20, w)
+        y_min, y_max = max(min(ys) - 20, 0), min(max(ys) + 20, h)
+
+        face_crop = image[y_min:y_max, x_min:x_max]
+
+        # Convert back to PIL Image
+        face_pil = Image.fromarray(face_crop)
+
+        return face_pil
