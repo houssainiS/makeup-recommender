@@ -27,24 +27,28 @@ def upload_photo(request):
                 decoded = base64.b64decode(encoded)
                 image = Image.open(io.BytesIO(decoded)).convert('RGB')
 
-            # Run your original classifier
+            # Run main classifier (skin type + skin defect + eyes)
             preds = predict(image)
             if "error" in preds:
                 return JsonResponse({"error": preds["error"]}, status=400)
 
             skin_type = preds['type_pred'].lower()
             skin_defect = preds['defect_pred'].lower()
-
-            # Prepare cropped face image base64 (original from classifier)
             cropped_face = preds.get("cropped_face")
+
+            # Convert cropped face to base64
             buffered = io.BytesIO()
             cropped_face.save(buffered, format="JPEG")
             cropped_face_base64 = base64.b64encode(buffered.getvalue()).decode()
 
-            # Run YOLO on cropped face, get detections and annotated image with boxes
+            # Eye colors (top predictions)
+            left_eye_color = preds.get("left_eye_color", "Unknown")
+            right_eye_color = preds.get("right_eye_color", "Unknown")
+
+            # Run YOLOv8 on cropped face to detect detailed skin defects
             yolo_boxes, yolo_annotated_image = detect_skin_defects_yolo(cropped_face)
 
-            # Convert annotated image to base64
+            # Convert YOLO annotated image to base64
             buffered_annot = io.BytesIO()
             yolo_annotated_image.save(buffered_annot, format="JPEG")
             yolo_annotated_base64 = base64.b64encode(buffered_annot.getvalue()).decode()
@@ -52,11 +56,13 @@ def upload_photo(request):
             return JsonResponse({
                 "skin_type": skin_type.title(),
                 "skin_defect": skin_defect.title(),
-                "cropped_face": f"data:image/jpeg;base64,{cropped_face_base64}",  # original cropped face
+                "cropped_face": f"data:image/jpeg;base64,{cropped_face_base64}",
                 "type_probs": preds.get("type_probs", []),
                 "defect_probs": preds.get("defect_probs", []),
                 "yolo_boxes": yolo_boxes,
-                "yolo_annotated": f"data:image/jpeg;base64,{yolo_annotated_base64}"  # cropped face with boxes
+                "yolo_annotated": f"data:image/jpeg;base64,{yolo_annotated_base64}",
+                "left_eye_color": left_eye_color.title(),
+                "right_eye_color": right_eye_color.title()
             })
 
         except Exception as e:

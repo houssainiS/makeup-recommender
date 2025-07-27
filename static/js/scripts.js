@@ -88,81 +88,86 @@
         }
 
         function showResults(data) {
-            document.getElementById("skinType").textContent = data.skin_type || data.predicted_type;
-            document.getElementById("skinDefect").textContent = data.skin_defect || data.predicted_defect;
+    document.getElementById("skinType").textContent = data.skin_type || data.predicted_type;
+    document.getElementById("skinDefect").textContent = data.skin_defect || data.predicted_defect;
 
-            if (data.cropped_face) {
-                const croppedFaceSection = document.getElementById('croppedFaceSection');
-                const croppedFaceImage = document.getElementById('croppedFaceImage');
-                croppedFaceImage.src = data.cropped_face;
-                croppedFaceSection.style.display = 'block';
+    if (data.cropped_face) {
+        const croppedFaceSection = document.getElementById('croppedFaceSection');
+        const croppedFaceImage = document.getElementById('croppedFaceImage');
+        croppedFaceImage.src = data.cropped_face;
+        croppedFaceSection.style.display = 'block';
 
-                // Show YOLO detection if available
-                if (data.yolo_boxes && data.yolo_boxes.length > 0) {
-                    const yoloDetectionSection = document.getElementById('yoloDetectionSection');
-                    const yoloCanvas = document.getElementById('yoloCanvas');
-                    const ctx = yoloCanvas.getContext('2d');
-                    const image = new Image();
+        // Show YOLO detection if available
+        if (data.yolo_boxes && data.yolo_boxes.length > 0) {
+            const yoloDetectionSection = document.getElementById('yoloDetectionSection');
+            const yoloCanvas = document.getElementById('yoloCanvas');
+            const ctx = yoloCanvas.getContext('2d');
+            const image = new Image();
 
-                    image.onload = function () {
-                        // Set canvas size to match image
-                        yoloCanvas.width = image.width;
-                        yoloCanvas.height = image.height;
-                        
-                        // Draw the image
-                        ctx.drawImage(image, 0, 0);
+            image.onload = function () {
+                // Set canvas size to match image
+                yoloCanvas.width = image.width;
+                yoloCanvas.height = image.height;
+                
+                // Draw the image
+                ctx.drawImage(image, 0, 0);
 
-                        // Draw bounding boxes
-                        data.yolo_boxes.forEach(box => {
-                            const [x1, y1, x2, y2] = box.bbox;
-                            const label = box.label;
-                            const confidence = box.confidence;
+                // Draw bounding boxes
+                data.yolo_boxes.forEach(box => {
+                    const [x1, y1, x2, y2] = box.bbox;
+                    const label = box.label;
+                    const confidence = box.confidence;
 
-                            // Draw bounding box
-                            ctx.strokeStyle = '#00ff00';
-                            ctx.lineWidth = 3;
-                            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                    // Draw bounding box
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
 
-                            // Draw semi-transparent background for text
-                            ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
-                            ctx.fillRect(x1, y1 - 25, (label.length + 10) * 8, 25);
+                    // Draw semi-transparent background for text
+                    ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+                    ctx.fillRect(x1, y1 - 25, (label.length + 10) * 8, 25);
 
-                            // Draw label text
-                            ctx.fillStyle = '#000000';
-                            ctx.font = 'bold 14px Arial';
-                            ctx.fillText(`${label} ${(confidence * 100).toFixed(1)}%`, x1 + 5, y1 - 8);
-                        });
-                    };
-                    image.crossOrigin = "anonymous";
-                    image.src = data.cropped_face;
-                    yoloDetectionSection.style.display = 'block';
-                } else {
-                    document.getElementById('yoloDetectionSection').style.display = 'none';
-                }
-            }
-
-            const skinDefectLabels = ['Acne', 'Redness', 'Bags', 'None'];
-            const skinTypeLabels = ['Dry', 'Normal', 'Oily'];
-            const defectColors = ['#ff6b6b', '#ff8a65', '#ffb74d', '#81c784'];
-            const typeColors = ['#64b5f6', '#4fc3f7', '#4dd0e1'];
-
-            if (data.type_probs && data.type_probs.length === skinTypeLabels.length) {
-                document.getElementById('typeProbsSection').style.display = 'block';
-                createProbBars('typeProbsBars', skinTypeLabels, data.type_probs, typeColors);
-            } else {
-                document.getElementById('typeProbsSection').style.display = 'none';
-            }
-
-            if (data.defect_probs && data.defect_probs.length === skinDefectLabels.length) {
-                document.getElementById('defectProbsSection').style.display = 'block';
-                createProbBars('defectProbsBars', skinDefectLabels, data.defect_probs, defectColors);
-            } else {
-                document.getElementById('defectProbsSection').style.display = 'none';
-            }
-
-            ajaxResults.style.display = 'block';
-            ajaxResults.classList.add('active');
+                    // Draw label text
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.fillText(`${label} ${(confidence * 100).toFixed(1)}%`, x1 + 5, y1 - 8);
+                });
+            };
+            image.crossOrigin = "anonymous";
+            image.src = data.cropped_face;
+            yoloDetectionSection.style.display = 'block';
+        } else {
+            document.getElementById('yoloDetectionSection').style.display = 'none';
         }
+    }
+
+    const skinDefectLabels = ['Acne', 'Redness', 'Bags', 'None'];
+    const skinTypeLabels = ['Dry', 'Normal', 'Oily'];
+    const defectColors = ['#ff6b6b', '#ff8a65', '#ffb74d', '#81c784'];
+    const typeColors = ['#64b5f6', '#4fc3f7', '#4dd0e1'];
+
+    if (data.type_probs && data.type_probs.length === skinTypeLabels.length) {
+        document.getElementById('typeProbsSection').style.display = 'block';
+        createProbBars('typeProbsBars', skinTypeLabels, data.type_probs, typeColors);
+    } else {
+        document.getElementById('typeProbsSection').style.display = 'none';
+    }
+
+    if (data.defect_probs && data.defect_probs.length === skinDefectLabels.length) {
+        document.getElementById('defectProbsSection').style.display = 'block';
+        createProbBars('defectProbsBars', skinDefectLabels, data.defect_probs, defectColors);
+    } else {
+        document.getElementById('defectProbsSection').style.display = 'none';
+    }
+
+    // Show eye colors as simple text
+    document.getElementById('leftEyeColor').textContent = data.left_eye_color ? `Left Eye: ${data.left_eye_color}` : '';
+    document.getElementById('rightEyeColor').textContent = data.right_eye_color ? `Right Eye: ${data.right_eye_color}` : '';
+
+    ajaxResults.style.display = 'block';
+    ajaxResults.classList.add('active');
+}
+
 
         function resetForm() {
             ajaxResults.style.display = 'none';
