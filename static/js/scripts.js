@@ -95,6 +95,35 @@ function createProbBars(containerId, labels, probs, colors) {
   })
 }
 
+// Segmentation tab functionality
+function initializeSegmentationTabs() {
+  const tabButtons = document.querySelectorAll(".tab-btn")
+  const containers = {
+    original: document.getElementById("originalContainer"),
+    segmented: document.getElementById("segmentedContainer"),
+    overlay: document.getElementById("overlayContainer"),
+  }
+
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const targetTab = button.dataset.tab
+
+      // Update active tab
+      tabButtons.forEach((btn) => btn.classList.remove("active"))
+      button.classList.add("active")
+
+      // Show/hide containers
+      Object.keys(containers).forEach((key) => {
+        if (key === targetTab) {
+          containers[key].style.display = "block"
+        } else {
+          containers[key].style.display = "none"
+        }
+      })
+    })
+  })
+}
+
 function showResults(data) {
   // Display skin type
   document.getElementById("skinType").textContent = data.skin_type || data.predicted_type || "Unknown"
@@ -134,6 +163,22 @@ function showResults(data) {
     const croppedFaceImage = document.getElementById("croppedFaceImage")
     croppedFaceImage.src = data.cropped_face
     croppedFaceSection.style.display = "block"
+
+    // Show segmentation if available
+    if (data.segmentation_overlay) {
+      const segmentationSection = document.getElementById("segmentationSection")
+
+      // Set up images for all tabs
+      document.getElementById("originalImage").src = data.cropped_face
+      document.getElementById("segmentedImage").src = data.segmentation_overlay
+      document.getElementById("overlayOriginal").src = data.cropped_face
+      document.getElementById("overlaySegmented").src = data.segmentation_overlay
+
+      segmentationSection.style.display = "block"
+      initializeSegmentationTabs()
+    } else {
+      document.getElementById("segmentationSection").style.display = "none"
+    }
 
     // Show YOLO detection if available
     if (data.yolo_boxes && data.yolo_boxes.length > 0) {
@@ -214,7 +259,7 @@ function showResults(data) {
 }
 
 function generateRecommendation(data) {
-  let recommendation = "Based on your analysis: "
+  let recommendation = "Based on your comprehensive AI analysis: "
 
   if (data.skin_type) {
     recommendation += `Your ${data.skin_type.toLowerCase()} skin type `
@@ -229,6 +274,12 @@ function generateRecommendation(data) {
   }
 
   recommendation += "suggest specific makeup techniques that will enhance your natural beauty. "
+
+  // Add segmentation-based recommendations
+  if (data.segmentation_overlay) {
+    recommendation +=
+      "Our advanced skin mapping has identified specific areas that can benefit from targeted makeup application. "
+  }
 
   // Add skin type specific recommendations
   if (data.skin_type) {
@@ -287,6 +338,7 @@ function resetForm() {
   document.getElementById("croppedFaceSection").style.display = "none"
   document.getElementById("yoloDetectionSection").style.display = "none"
   document.getElementById("acneAnalysisSection").style.display = "none"
+  document.getElementById("segmentationSection").style.display = "none"
 }
 
 // Camera functionality

@@ -7,7 +7,7 @@ import io
 
 from recommender.models.ml_model import predict
 from recommender.models.yolo_model import detect_skin_defects_yolo
-
+from recommender.models.segment_skin_conditions_yolo import segment_skin_conditions  # <-- Added
 
 def home(request):
     return render(request, "recommender/home.html")
@@ -56,6 +56,12 @@ def upload_photo(request):
             yolo_annotated_image.save(buffered_annot, format="JPEG")
             yolo_annotated_base64 = base64.b64encode(buffered_annot.getvalue()).decode()
 
+            # 🆕 Run YOLOv8 segmentation model
+            segmented_img, _ = segment_skin_conditions(cropped_face)
+            buffered_seg = io.BytesIO()
+            segmented_img.save(buffered_seg, format="JPEG")
+            segmented_base64 = base64.b64encode(buffered_seg.getvalue()).decode()
+
             return JsonResponse({
                 "skin_type": skin_type.title(),
                 "acne_pred": acne_pred,
@@ -65,7 +71,8 @@ def upload_photo(request):
                 "yolo_boxes": yolo_boxes,
                 "yolo_annotated": f"data:image/jpeg;base64,{yolo_annotated_base64}",
                 "left_eye_color": left_eye_color.title(),
-                "right_eye_color": right_eye_color.title()
+                "right_eye_color": right_eye_color.title(),
+                "segmentation_overlay": f"data:image/jpeg;base64,{segmented_base64}"  # <-- Added
             })
 
         except Exception as e:
