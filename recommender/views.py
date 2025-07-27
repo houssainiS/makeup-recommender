@@ -27,13 +27,12 @@ def upload_photo(request):
                 decoded = base64.b64decode(encoded)
                 image = Image.open(io.BytesIO(decoded)).convert('RGB')
 
-            # Run main classifier (skin type + skin defect + eyes)
+            # Run main classifier (skin type + eyes)
             preds = predict(image)
             if "error" in preds:
                 return JsonResponse({"error": preds["error"]}, status=400)
 
             skin_type = preds['type_pred'].lower()
-            skin_defect = preds['defect_pred'].lower()
             cropped_face = preds.get("cropped_face")
 
             # Convert cropped face to base64
@@ -55,10 +54,10 @@ def upload_photo(request):
 
             return JsonResponse({
                 "skin_type": skin_type.title(),
-                "skin_defect": skin_defect.title(),
+                # Removed skin_defect since no defect model
                 "cropped_face": f"data:image/jpeg;base64,{cropped_face_base64}",
                 "type_probs": preds.get("type_probs", []),
-                "defect_probs": preds.get("defect_probs", []),
+                # Removed defect_probs
                 "yolo_boxes": yolo_boxes,
                 "yolo_annotated": f"data:image/jpeg;base64,{yolo_annotated_base64}",
                 "left_eye_color": left_eye_color.title(),

@@ -114,7 +114,7 @@ body {
   margin-bottom: 5px;
 }
 
-/* Cropped Face Section - Updated to Square */
+/* Cropped Face Section - Square */
 .cropped-face-section {
   text-align: center;
   margin-bottom: 2rem;
@@ -142,7 +142,7 @@ body {
 }
 
 .face-frame.square {
-  border-radius: 15px; /* Rounded square instead of circle */
+  border-radius: 15px;
 }
 
 .face-frame img {
@@ -298,6 +298,19 @@ body {
   font-weight: 500;
   color: #ff6b6b;
   text-transform: capitalize;
+  margin-bottom: 3px;
+}
+
+/* Eye Colors Container */
+.eye-colors-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.eye-colors-container .result-value {
+  font-size: 0.95rem;
+  margin-bottom: 2px;
 }
 
 /* Analysis Statistics */

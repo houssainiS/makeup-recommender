@@ -21,7 +21,7 @@
 
         <main class="main-content">
             <!-- Django Template Results (Server-side rendering) -->
-            {% if predicted_type and predicted_defect and recommendation %}
+            {% if predicted_type and recommendation %}
             <div class="results-section active">
                 <div class="results-header">
                     <i class="fas fa-brain"></i>
@@ -37,16 +37,16 @@
                             <p class="result-value">{{ predicted_type|title }}</p>
                         </div>
                     </div>
-                    <div class="result-item">
-                        <div class="result-icon">
-                            <i class="fas fa-search"></i>
+                    <div class="recommendation-card">
+                        <div class="recommendation-header">
+                            <i class="fas fa-palette"></i>
+                            <h3>Your Personalized Makeup Recommendation</h3>
                         </div>
-                        <div class="result-details">
-                            <h3>Skin Defects</h3>
-                            <p class="result-value">{{ predicted_defect|title }}</p>
+                        <div class="recommendation-content">
+                            <p>{{ recommendation }}</p>
                         </div>
                     </div>
-                    
+                </div>
                 <div class="results-actions">
                     <button class="btn btn-secondary" onclick="location.reload()">
                         <i class="fas fa-redo"></i>
@@ -78,6 +78,7 @@
                 </div>
 
                 <div class="results-content">
+                    <!-- Skin Type Result -->
                     <div class="result-item">
                         <div class="result-icon">
                             <i class="fas fa-user-circle"></i>
@@ -87,13 +88,18 @@
                             <p class="result-value" id="skinType"></p>
                         </div>
                     </div>
+
+                    <!-- Eye Colors Result -->
                     <div class="result-item">
                         <div class="result-icon">
-                            <i class="fas fa-search"></i>
+                            <i class="fas fa-eye"></i>
                         </div>
                         <div class="result-details">
-                            <h3>Skin Defects</h3>
-                            <p class="result-value" id="skinDefect"></p>
+                            <h3>Eye Colors</h3>
+                            <div class="eye-colors-container">
+                                <p class="result-value" id="leftEyeColor"></p>
+                                <p class="result-value" id="rightEyeColor"></p>
+                            </div>
                         </div>
                     </div>
 
@@ -106,15 +112,6 @@
                                 <h3>Skin Type Analysis</h3>
                             </div>
                             <div class="prob-bars-container" id="typeProbsBars"></div>
-                        </div>
-
-                        <!-- Skin Defect Probabilities -->
-                        <div class="probabilities-section" id="defectProbsSection" style="display:none;">
-                            <div class="prob-header">
-                                <i class="fas fa-microscope"></i>
-                                <h3>Skin Condition Analysis</h3>
-                            </div>
-                            <div class="prob-bars-container" id="defectProbsBars"></div>
                         </div>
                     </div>
 
@@ -140,21 +137,17 @@
                         </div>
                     </div>
 
-                    
+                    <!-- Recommendation Card -->
+                    <div class="recommendation-card">
+                        <div class="recommendation-header">
+                            <i class="fas fa-palette"></i>
+                            <h3>Your Personalized Makeup Recommendation</h3>
+                        </div>
+                        <div class="recommendation-content">
+                            <p id="recommendationText">Based on your skin type and eye color, we'll provide personalized makeup recommendations.</p>
+                        </div>
+                    </div>
                 </div>
-
- <div class="result-item">
-  <div class="result-icon">
-    <i class="fas fa-eye"></i>
-  </div>
-  <div class="result-details">
-    <h3>Eye Colors</h3>
-    <p class="result-value" id="leftEyeColor"></p>
-    <p class="result-value" id="rightEyeColor"></p>
-  </div>
-</div>
-
-
 
                 <div class="results-actions">
                     <button class="btn btn-secondary" onclick="resetForm()">
