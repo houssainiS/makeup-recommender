@@ -27,7 +27,7 @@ def upload_photo(request):
                 decoded = base64.b64decode(encoded)
                 image = Image.open(io.BytesIO(decoded)).convert('RGB')
 
-            # Run main classifier (skin type + eyes)
+            # Run main classifier (skin type + eyes + acne)
             preds = predict(image)
             if "error" in preds:
                 return JsonResponse({"error": preds["error"]}, status=400)
@@ -44,6 +44,10 @@ def upload_photo(request):
             left_eye_color = preds.get("left_eye_color", "Unknown")
             right_eye_color = preds.get("right_eye_color", "Unknown")
 
+            # Acne prediction
+            acne_pred = preds.get("acne_pred", "Unknown")
+            acne_confidence = preds.get("acne_confidence", 0)
+
             # Run YOLOv8 on cropped face to detect detailed skin defects
             yolo_boxes, yolo_annotated_image = detect_skin_defects_yolo(cropped_face)
 
@@ -54,10 +58,10 @@ def upload_photo(request):
 
             return JsonResponse({
                 "skin_type": skin_type.title(),
-                # Removed skin_defect since no defect model
+                "acne_pred": acne_pred,
+                "acne_confidence": round(acne_confidence, 4),
                 "cropped_face": f"data:image/jpeg;base64,{cropped_face_base64}",
                 "type_probs": preds.get("type_probs", []),
-                # Removed defect_probs
                 "yolo_boxes": yolo_boxes,
                 "yolo_annotated": f"data:image/jpeg;base64,{yolo_annotated_base64}",
                 "left_eye_color": left_eye_color.title(),

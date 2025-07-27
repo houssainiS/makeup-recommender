@@ -105,6 +105,29 @@ function showResults(data) {
     ? `Right Eye: ${data.right_eye_color}`
     : ""
 
+  // Display acne level and confidence with styling
+  const acneLevelElement = document.getElementById("acneLevel")
+  const acneConfidenceElement = document.getElementById("acneConfidence")
+
+  acneLevelElement.textContent = data.acne_pred || "Unknown"
+
+  if (data.acne_confidence) {
+    const confidencePercent = data.acne_confidence * 100
+    acneConfidenceElement.textContent = `Confidence: ${confidencePercent.toFixed(1)}%`
+
+    // Add confidence level styling
+    acneConfidenceElement.classList.remove("high-confidence", "medium-confidence", "low-confidence")
+    if (confidencePercent >= 80) {
+      acneConfidenceElement.classList.add("high-confidence")
+    } else if (confidencePercent >= 60) {
+      acneConfidenceElement.classList.add("medium-confidence")
+    } else {
+      acneConfidenceElement.classList.add("low-confidence")
+    }
+  } else {
+    acneConfidenceElement.textContent = ""
+  }
+
   // Show cropped face if available
   if (data.cropped_face) {
     const croppedFaceSection = document.getElementById("croppedFaceSection")
@@ -167,6 +190,22 @@ function showResults(data) {
     document.getElementById("typeProbsSection").style.display = "none"
   }
 
+  // Show acne analysis if available
+  if (data.acne_pred && data.acne_confidence) {
+    const acneAnalysisSection = document.getElementById("acneAnalysisSection")
+    const acneConfidenceFill = document.getElementById("acneConfidenceFill")
+    const acneConfidenceText = document.getElementById("acneConfidenceText")
+
+    const confidencePercent = data.acne_confidence * 100
+
+    acneConfidenceFill.style.width = confidencePercent + "%"
+    acneConfidenceText.textContent = `${data.acne_pred} - ${confidencePercent.toFixed(1)}% Confidence`
+
+    acneAnalysisSection.style.display = "block"
+  } else {
+    document.getElementById("acneAnalysisSection").style.display = "none"
+  }
+
   // Generate recommendation based on available data
   generateRecommendation(data)
 
@@ -179,6 +218,10 @@ function generateRecommendation(data) {
 
   if (data.skin_type) {
     recommendation += `Your ${data.skin_type.toLowerCase()} skin type `
+  }
+
+  if (data.acne_pred && data.acne_pred.toLowerCase() !== "unknown") {
+    recommendation += `with ${data.acne_pred.toLowerCase()} acne level `
   }
 
   if (data.left_eye_color && data.right_eye_color) {
@@ -196,6 +239,21 @@ function generateRecommendation(data) {
       recommendation += "For oily skin, use mattifying primers and long-lasting foundations. "
     } else if (skinType === "normal") {
       recommendation += "Your normal skin type gives you flexibility with most makeup products. "
+    }
+  }
+
+  // Add acne-specific recommendations
+  if (data.acne_pred) {
+    const acneLevel = data.acne_pred.toLowerCase()
+    if (acneLevel === "severe" || acneLevel === "high") {
+      recommendation +=
+        "For acne-prone skin, use non-comedogenic products and consider color-correcting concealers. Green concealer can neutralize redness. "
+    } else if (acneLevel === "moderate" || acneLevel === "medium") {
+      recommendation += "For moderate acne, use lightweight, buildable coverage and spot concealing techniques. "
+    } else if (acneLevel === "mild" || acneLevel === "low") {
+      recommendation += "With mild acne concerns, focus on gentle coverage and skin-friendly formulations. "
+    } else if (acneLevel === "clear" || acneLevel === "none") {
+      recommendation += "Your clear skin allows for versatile makeup looks and lighter coverage options. "
     }
   }
 
@@ -228,6 +286,7 @@ function resetForm() {
   document.getElementById("typeProbsSection").style.display = "none"
   document.getElementById("croppedFaceSection").style.display = "none"
   document.getElementById("yoloDetectionSection").style.display = "none"
+  document.getElementById("acneAnalysisSection").style.display = "none"
 }
 
 // Camera functionality

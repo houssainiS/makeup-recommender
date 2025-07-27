@@ -13,6 +13,7 @@ from recommender.models.facemesh_model import detect_and_crop_face, crop_left_ey
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SKIN_TYPE_MODEL_PATH = os.path.join(BASE_DIR, "skin_model.pth")
 EYE_COLOR_MODEL_PATH = os.path.join(BASE_DIR, "eye_color_model.pth")
+ACNE_MODEL_PATH = os.path.join(BASE_DIR, "acne.pth")  # <-- added acne model path
 
 # ----------------------
 # 🧠 Model Definitions
@@ -41,6 +42,15 @@ class EyeColorResNet(nn.Module):
     def forward(self, x):
         return self.base_model(x)
 
+class AcneResNet(nn.Module):  # <-- fixed acne model class
+    def __init__(self, num_classes=5):
+        super(AcneResNet, self).__init__()
+        self.backbone = models.resnet18(weights=None)  # no pretrained weights
+        self.backbone.fc = nn.Linear(self.backbone.fc.in_features, num_classes)
+
+    def forward(self, x):
+        return self.backbone(x)
+
 # ----------------------
 # 🔁 Image Transforms
 # ----------------------
@@ -51,6 +61,12 @@ transform_type = transforms.Compose([
 
 transform_eye = transforms.Compose([
     transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+])
+
+transform_acne = transforms.Compose([  # <-- transform for acne model
+    transforms.Resize((640, 640)),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
@@ -68,15 +84,37 @@ eye_model = EyeColorResNet(num_classes=6)
 eye_model.load_state_dict(torch.load(EYE_COLOR_MODEL_PATH, map_location=device))
 eye_model.to(device).eval()
 
+acne_model = AcneResNet(num_classes=5)
+acne_model.load_state_dict(torch.load(ACNE_MODEL_PATH, map_location=device))
+acne_model.to(device).eval()
+
 # ----------------------
 # 🏷️ Class Labels
 # ----------------------
 skin_type_labels = ['dry', 'normal', 'oily']
 eye_color_labels = ['Amber', 'Blue', 'Brown', 'Green', 'Grey', 'Hazel']
+acne_labels = ['0', '1', '2', '3', 'Clear']  # Adjust as needed
 
 # ----------------------
-# 🔮 Main Prediction Function
+# 🔮 Prediction Functions
 # ----------------------
+
+def predict_acne(image: Image.Image) -> dict:
+    image = image.convert("RGB")
+    input_tensor = transform_acne(image).unsqueeze(0).to(device)
+
+    with torch.no_grad():
+        outputs = acne_model(input_tensor)
+        probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
+        pred_idx = probs.argmax()
+        confidence = probs[pred_idx]
+
+    return {
+        "acne_pred": acne_labels[pred_idx],
+        "acne_probs": probs.tolist(),
+        "acne_confidence": float(confidence)
+    }
+
 def predict(image: Image.Image) -> dict:
     image = image.convert("RGB")
 
@@ -106,10 +144,14 @@ def predict(image: Image.Image) -> dict:
         left_eye_color = max(left_eye_dict, key=left_eye_dict.get)
         right_eye_color = max(right_eye_dict, key=right_eye_dict.get)
 
+    # Add acne prediction on the cropped face
+    acne_result = predict_acne(face_image)
+
     return {
         "type_pred": type_pred,
         "type_probs": type_probs.tolist(),
         "left_eye_color": left_eye_color,
         "right_eye_color": right_eye_color,
         "cropped_face": face_image,
+        **acne_result,
     }
