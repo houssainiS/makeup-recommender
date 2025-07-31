@@ -346,6 +346,7 @@ function generateRecommendation(data) {
 }
 
 function resetForm() {
+  stopCamera() // Ensure camera is stopped and capture button is disabled
   ajaxResults.style.display = "none"
   ajaxResults.classList.remove("active")
   document.querySelector(".upload-section").style.display = "block"
@@ -387,7 +388,7 @@ function stopCamera() {
     video.parentElement.style.display = "none"
     captureBtn.disabled = true
     startCameraBtn.innerHTML = '<i class="fas fa-video"></i> Start Camera'
-    startCameraBtn.onclick = () => startCameraBtn.click()
+    startCameraBtn.onclick = () => startCameraBtn.click() // Re-attach original click handler
   }
 }
 

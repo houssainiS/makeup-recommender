@@ -337,7 +337,7 @@
                         <p>Choose a clear photo of your face for the best recommendations</p>
                     </div>
                     
-                    <form id="uploadForm" method="post" enctype="multipart/form-data" action="{% url 'upload_photo' %}">
+                    <form id="uploadForm" method="post" enctype="multipart/form-data" action="{% url 'upload_photo' %}" style="text-align: center;">
                         {% csrf_token %}
                         <div class="upload-area">
                             <input type="file" accept="image/*" id="fileInput" name="photo" required>
