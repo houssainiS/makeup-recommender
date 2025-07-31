@@ -40,9 +40,15 @@ def upload_photo(request):
             cropped_face.save(buffered, format="JPEG")
             cropped_face_base64 = base64.b64encode(buffered.getvalue()).decode()
 
-            # Eye colors (top predictions)
+            # Eye colors (top predictions or "Eyes Closed")
             left_eye_color = preds.get("left_eye_color", "Unknown")
             right_eye_color = preds.get("right_eye_color", "Unknown")
+
+            # Only title-case if not "Eyes Closed"
+            if left_eye_color.lower() != "eyes closed":
+                left_eye_color = left_eye_color.title()
+            if right_eye_color.lower() != "eyes closed":
+                right_eye_color = right_eye_color.title()
 
             # Acne prediction
             acne_pred = preds.get("acne_pred", "Unknown")
@@ -70,9 +76,9 @@ def upload_photo(request):
                 "type_probs": preds.get("type_probs", []),
                 "yolo_boxes": yolo_boxes,
                 "yolo_annotated": f"data:image/jpeg;base64,{yolo_annotated_base64}",
-                "left_eye_color": left_eye_color.title(),
-                "right_eye_color": right_eye_color.title(),
-                "segmentation_overlay": f"data:image/jpeg;base64,{segmented_base64}"  # <-- Added
+                "left_eye_color": left_eye_color,
+                "right_eye_color": right_eye_color,
+                "segmentation_overlay": f"data:image/jpeg;base64,{segmented_base64}"
             })
 
         except Exception as e:

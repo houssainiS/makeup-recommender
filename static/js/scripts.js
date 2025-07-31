@@ -97,13 +97,31 @@ function createProbBars(containerId, labels, probs, colors) {
 
 // Segmentation tab functionality
 function initializeSegmentationTabs() {
-  const tabButtons = document.querySelectorAll(".tab-btn")
+  const tabButtons = document.querySelectorAll(".segmentation-tabs .tab-btn")
   const containers = {
     original: document.getElementById("originalContainer"),
     segmented: document.getElementById("segmentedContainer"),
     overlay: document.getElementById("overlayContainer"),
   }
 
+  // Set initial state: segmented tab active, segmented image visible
+  tabButtons.forEach((button) => {
+    if (button.dataset.tab === "segmented") {
+      button.classList.add("active")
+    } else {
+      button.classList.remove("active")
+    }
+  })
+
+  Object.keys(containers).forEach((key) => {
+    if (key === "segmented") {
+      containers[key].style.display = "block"
+    } else {
+      containers[key].style.display = "none"
+    }
+  })
+
+  // Add event listeners for subsequent clicks
   tabButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const targetTab = button.dataset.tab
@@ -175,7 +193,7 @@ function showResults(data) {
       document.getElementById("overlaySegmented").src = data.segmentation_overlay
 
       segmentationSection.style.display = "block"
-      initializeSegmentationTabs()
+      initializeSegmentationTabs() // This function needs to be updated
     } else {
       document.getElementById("segmentationSection").style.display = "none"
     }
@@ -319,6 +337,8 @@ function generateRecommendation(data) {
       recommendation += "Green eyes are enhanced by purples, plums, and warm reddish tones."
     } else if (eyeColor.includes("hazel")) {
       recommendation += "Hazel eyes can be enhanced with both warm and cool tones depending on the lighting."
+    } else if (eyeColor.includes("eyes closed")) {
+      recommendation += "Please ensure your eyes are open in the photo for accurate eye color analysis."
     }
   }
 
