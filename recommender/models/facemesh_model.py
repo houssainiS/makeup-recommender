@@ -16,9 +16,21 @@ def detect_and_crop_face(pil_image: Image.Image):
 
     # Brightness check
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    brightness = np.mean(gray)
-    if brightness < 50 or brightness > 220:
+
+# Estimate face center region to sample lighting
+    center_x, center_y = w // 2, h // 2
+    sample_size = 100  # sample 100x100 pixels around center
+    x1 = max(center_x - sample_size // 2, 0)
+    y1 = max(center_y - sample_size // 2, 0)
+    x2 = min(center_x + sample_size // 2, w)
+    y2 = min(center_y + sample_size // 2, h)
+
+    face_region = gray[y1:y2, x1:x2]
+    brightness = np.mean(face_region)
+
+    if brightness < 50:
         raise ValueError("Poor lighting detected. Please use a well-lit photo.")
+
 
     with mp_face_mesh.FaceMesh(
         static_image_mode=True,
