@@ -7,8 +7,8 @@ mp_face_mesh = mp.solutions.face_mesh
 
 def detect_and_crop_face(pil_image: Image.Image):
     """
-    Detect face, check lighting and tilt, check if eyes are closed (flag).
-    Returns (cropped_face: PIL.Image, eyes_closed: bool)
+    Detect face, check lighting and tilt, and check if eyes are closed.
+    Returns (cropped_face: PIL.Image, left_closed: bool, right_closed: bool)
     Raises ValueError only if lighting is poor or no face found.
     """
     image = np.array(pil_image.convert("RGB"))
@@ -16,10 +16,8 @@ def detect_and_crop_face(pil_image: Image.Image):
 
     # Brightness check
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-
-# Estimate face center region to sample lighting
     center_x, center_y = w // 2, h // 2
-    sample_size = 100  # sample 100x100 pixels around center
+    sample_size = 100
     x1 = max(center_x - sample_size // 2, 0)
     y1 = max(center_y - sample_size // 2, 0)
     x2 = min(center_x + sample_size // 2, w)
@@ -31,14 +29,12 @@ def detect_and_crop_face(pil_image: Image.Image):
     if brightness < 50:
         raise ValueError("Poor lighting detected. Please use a well-lit photo.")
 
-
     with mp_face_mesh.FaceMesh(
         static_image_mode=True,
         max_num_faces=1,
         refine_landmarks=True,
         min_detection_confidence=0.5
     ) as face_mesh:
-
         results = face_mesh.process(image)
 
         if not results.multi_face_landmarks or len(results.multi_face_landmarks) != 1:
@@ -59,9 +55,8 @@ def detect_and_crop_face(pil_image: Image.Image):
 
         left_closed = is_eye_closed(left_eye_indices)
         right_closed = is_eye_closed(right_eye_indices)
-        eyes_closed = left_closed and right_closed
 
-        # Tilt check — soft threshold (only block extreme cases)
+        # Tilt check — soft warning
         def get_eye_center(indices):
             pts = np.array([(landmarks[i].x * w, landmarks[i].y * h) for i in indices])
             return np.mean(pts, axis=0)
@@ -73,10 +68,8 @@ def detect_and_crop_face(pil_image: Image.Image):
         dy = right_center[1] - left_center[1]
         angle = np.degrees(np.arctan2(dy, dx))
 
-        # Allow tilt up to 30 degrees
         if abs(angle) > 30:
             print(f"[WARN] Face tilt angle too high: {angle:.1f} degrees")
-            # But don't raise an error anymore
 
         # Crop face tightly
         xs = [int(lm.x * w) for lm in landmarks]
@@ -85,7 +78,7 @@ def detect_and_crop_face(pil_image: Image.Image):
         y_min, y_max = max(min(ys) - 20, 0), min(max(ys) + 20, h)
 
         face_crop = image[y_min:y_max, x_min:x_max]
-        return Image.fromarray(face_crop), eyes_closed
+        return Image.fromarray(face_crop), left_closed, right_closed
 
 
 def crop_left_eye(pil_image: Image.Image) -> Image.Image:
@@ -108,7 +101,6 @@ def _crop_eye(pil_image: Image.Image, eye_indices: list) -> Image.Image:
         refine_landmarks=True,
         min_detection_confidence=0.5
     ) as face_mesh:
-
         results = face_mesh.process(image)
 
         if not results.multi_face_landmarks or len(results.multi_face_landmarks) != 1:

@@ -113,7 +113,7 @@ def predict_acne(image: Image.Image) -> dict:
 def predict(image: Image.Image) -> dict:
     image = image.convert("RGB")
     try:
-        face_image, eyes_closed = detect_and_crop_face(image)
+        face_image, left_closed, right_closed = detect_and_crop_face(image)
         left_eye = crop_left_eye(image)
         right_eye = crop_right_eye(image)
     except ValueError as e:
@@ -125,18 +125,23 @@ def predict(image: Image.Image) -> dict:
         type_probs = F.softmax(type_out, dim=1).cpu().numpy()[0]
         type_pred = skin_type_labels[int(type_probs.argmax())]
 
-    if eyes_closed:
+    # Eye color logic with per-eye closed check
+    if left_closed:
         left_eye_color = "Eyes Closed"
-        right_eye_color = "Eyes Closed"
     else:
         input_left_eye = transform_eye(left_eye).unsqueeze(0).to(device)
-        input_right_eye = transform_eye(right_eye).unsqueeze(0).to(device)
         with torch.no_grad():
             left_eye_out = torch.sigmoid(eye_model(input_left_eye)).cpu().numpy()[0]
-            right_eye_out = torch.sigmoid(eye_model(input_right_eye)).cpu().numpy()[0]
         left_eye_dict = dict(zip(eye_color_labels, [float(p) for p in left_eye_out]))
-        right_eye_dict = dict(zip(eye_color_labels, [float(p) for p in right_eye_out]))
         left_eye_color = max(left_eye_dict, key=left_eye_dict.get)
+
+    if right_closed:
+        right_eye_color = "Eyes Closed"
+    else:
+        input_right_eye = transform_eye(right_eye).unsqueeze(0).to(device)
+        with torch.no_grad():
+            right_eye_out = torch.sigmoid(eye_model(input_right_eye)).cpu().numpy()[0]
+        right_eye_dict = dict(zip(eye_color_labels, [float(p) for p in right_eye_out]))
         right_eye_color = max(right_eye_dict, key=right_eye_dict.get)
 
     acne_result = predict_acne(face_image)

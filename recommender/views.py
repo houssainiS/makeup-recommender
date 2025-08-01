@@ -45,10 +45,11 @@ def upload_photo(request):
             right_eye_color = preds.get("right_eye_color", "Unknown")
 
             # Only title-case if not "Eyes Closed"
-            if left_eye_color.lower() != "eyes closed":
+            if "closed" not in left_eye_color.lower():
                 left_eye_color = left_eye_color.title()
-            if right_eye_color.lower() != "eyes closed":
+            if "closed" not in right_eye_color.lower():
                 right_eye_color = right_eye_color.title()
+
 
             # Acne prediction
             acne_pred = preds.get("acne_pred", "Unknown")
