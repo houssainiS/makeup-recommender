@@ -5,7 +5,7 @@ import cv2
 from PIL import Image
 
 # Load model once (on import)
-seg_model = YOLO("D:/django projects/makeup recommander/makeupAI/recommender/AImodels/skin_condition_seg.pt")
+seg_model = YOLO("recommender/AImodels/skin_condition_seg.pt")
 
 def segment_skin_conditions(image_pil):
     # Convert PIL to OpenCV

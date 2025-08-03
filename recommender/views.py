@@ -4,12 +4,13 @@ from django.http import JsonResponse
 from PIL import Image
 import base64
 import io
+import json
 
 from recommender.AImodels.ml_model import predict
 from recommender.AImodels.yolo_model import detect_skin_defects_yolo
 from recommender.AImodels.segment_skin_conditions_yolo import segment_skin_conditions  # <-- Added
 
-from .models import FaceAnalysis  # Import your FaceAnalysis model
+from .models import FaceAnalysis , Feedback # Import your FaceAnalysis model
 
 
 def home(request):
@@ -136,3 +137,31 @@ def get_device_type(request):
     elif 'tablet' in user_agent:
         return 'Tablet'
     return 'Desktop'
+
+
+#feedback
+@csrf_exempt
+def submit_feedback(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            feedback_type = data.get("feedback_type")
+            dislike_reason = data.get("dislike_reason", "").strip()
+
+            if feedback_type not in ["like", "dislike"]:
+                return JsonResponse({"error": "Invalid feedback type"}, status=400)
+
+            if feedback_type == "dislike" and not dislike_reason:
+                return JsonResponse({"error": "Dislike reason is required"}, status=400)
+
+            feedback = Feedback(
+                feedback_type=feedback_type,
+                dislike_reason=dislike_reason if feedback_type == "dislike" else ""
+            )
+            feedback.save()
+
+            return JsonResponse({"message": "Feedback saved successfully"})
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method"}, status=405)

@@ -9,6 +9,16 @@ const fileInput = document.getElementById("fileInput")
 const photoPreview = document.getElementById("photoPreview")
 const loadingSection = document.getElementById("loadingSection")
 const ajaxResults = document.getElementById("ajaxResults")
+
+// New feedback elements
+const feedbackSection = document.getElementById("feedbackSection")
+const likeBtn = document.getElementById("likeBtn")
+const dislikeBtn = document.getElementById("dislikeBtn")
+const dislikeFeedbackArea = document.getElementById("dislikeFeedbackArea")
+const dislikeReason = document.getElementById("dislikeReason")
+const submitDislikeFeedbackBtn = document.getElementById("submitDislikeFeedbackBtn")
+const feedbackMessage = document.getElementById("feedbackMessage")
+
 let stream
 
 // File input preview
@@ -276,6 +286,14 @@ function showResults(data) {
 
   ajaxResults.style.display = "block"
   ajaxResults.classList.add("active")
+
+  // Show feedback section and reset its state
+  feedbackSection.style.display = "block"
+  feedbackMessage.style.display = "none" // Hide any previous feedback message
+  dislikeFeedbackArea.style.display = "none" // Hide dislike area initially
+  dislikeReason.value = "" // Clear previous reason
+  likeBtn.disabled = false // Enable buttons
+  dislikeBtn.disabled = false
 }
 
 function generateRecommendation(data) {
@@ -362,6 +380,14 @@ function resetForm() {
   document.getElementById("yoloDetectionSection").style.display = "none"
   document.getElementById("acneAnalysisSection").style.display = "none"
   document.getElementById("segmentationSection").style.display = "none"
+
+  // Reset feedback section
+  feedbackSection.style.display = "none"
+  feedbackMessage.style.display = "none"
+  dislikeFeedbackArea.style.display = "none"
+  dislikeReason.value = ""
+  likeBtn.disabled = false
+  dislikeBtn.disabled = false
 }
 
 // Camera functionality
@@ -437,3 +463,99 @@ captureBtn.addEventListener("click", async () => {
   captureBtn.innerHTML = '<i class="fas fa-camera-retro"></i> Capture Photo'
   captureBtn.disabled = false
 })
+
+// Function to send feedback to the backend
+async function sendFeedback(feedbackType, reason = "") {
+  feedbackMessage.style.display = "none" // Hide previous messages
+  likeBtn.disabled = true
+  dislikeBtn.disabled = true
+  submitDislikeFeedbackBtn.disabled = true // Disable submit button for dislike
+
+  try {
+    const response = await fetch("/submit-feedback/", {
+      // Ensure this URL matches your Django urls.py
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Since your Django view is @csrf_exempt, we don't strictly need CSRF token here.
+        // If you remove @csrf_exempt later, you'll need to add:
+        // "X-CSRFToken": getCookie('csrftoken'),
+      },
+      body: JSON.stringify({
+        feedback_type: feedbackType,
+        dislike_reason: reason,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      feedbackMessage.textContent = data.message || "Thank you for your feedback!"
+      feedbackMessage.classList.remove("text-red-600", "bg-red-100", "border-red-200")
+      feedbackMessage.classList.add("text-green-600", "bg-green-100", "border-green-200")
+    } else {
+      feedbackMessage.textContent = data.error || "Failed to submit feedback."
+      feedbackMessage.classList.remove("text-green-600", "bg-green-100", "border-green-200")
+      feedbackMessage.classList.add("text-red-600", "bg-red-100", "border-red-200")
+      // Re-enable buttons if submission failed
+      likeBtn.disabled = false
+      dislikeBtn.disabled = false
+      if (feedbackType === "dislike") {
+        submitDislikeFeedbackBtn.disabled = false
+      }
+    }
+  } catch (error) {
+    feedbackMessage.textContent = "Network error: Could not submit feedback."
+    feedbackMessage.classList.remove("text-green-600", "bg-green-100", "border-green-200")
+    feedbackMessage.classList.add("text-red-600", "bg-red-100", "border-red-200")
+    // Re-enable buttons on network error
+    likeBtn.disabled = false
+    dislikeBtn.disabled = false
+    if (feedbackType === "dislike") {
+      submitDislikeFeedbackBtn.disabled = false
+    }
+  } finally {
+    feedbackMessage.style.display = "block"
+    dislikeFeedbackArea.style.display = "none" // Hide dislike area after submission attempt
+    dislikeReason.value = "" // Clear reason
+  }
+}
+
+// Feedback functionality event listeners
+likeBtn.addEventListener("click", () => {
+  sendFeedback("like")
+})
+
+dislikeBtn.addEventListener("click", () => {
+  dislikeFeedbackArea.style.display = "block"
+  feedbackMessage.style.display = "none" // Hide any previous message
+  likeBtn.disabled = true // Disable like button once dislike is chosen
+  dislikeBtn.disabled = true // Disable dislike button to prevent multiple clicks
+  submitDislikeFeedbackBtn.disabled = false // Enable submit button for dislike
+})
+
+submitDislikeFeedbackBtn.addEventListener("click", () => {
+  const reason = dislikeReason.value.trim()
+  if (reason) {
+    sendFeedback("dislike", reason)
+  } else {
+    alert("Please provide a reason for disliking the analysis.")
+  }
+})
+
+// Helper function to get CSRF token (if needed later)
+// function getCookie(name) {
+//     let cookieValue = null;
+//     if (document.cookie && document.cookie !== '') {
+//         const cookies = document.cookie.split(';');
+//         for (let i = 0; i < cookies.length; i++) {
+//             const cookie = cookies[i].trim();
+//             // Does this cookie string begin with the name we want?
+//             if (cookie.substring(0, name.length + 1) === (name + '=')) {
+//                 cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+//                 break;
+//             }
+//         }
+//     }
+//     return cookieValue;
+// }
