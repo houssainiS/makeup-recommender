@@ -39,12 +39,14 @@ uploadForm.addEventListener("submit", async (e) => {
     hideLoading()
     if (data.error) {
       alert("Error: " + data.error)
+      resetForm() // Re-show buttons on error
       return
     }
     showResults(data)
   } catch (err) {
     hideLoading()
     alert("Something went wrong: " + err.message)
+    resetForm() // Re-show buttons on error
   }
 })
 
@@ -379,6 +381,7 @@ startCameraBtn.addEventListener("click", async () => {
     startCameraBtn.onclick = stopCamera
   } catch (err) {
     alert("Could not access camera: " + err.message)
+    resetForm() // Re-show buttons on camera access error
   }
 })
 
@@ -419,6 +422,7 @@ captureBtn.addEventListener("click", async () => {
 
     if (data.error) {
       alert("Error: " + data.error)
+      resetForm() // Re-show buttons on error
       return
     }
 
@@ -426,6 +430,7 @@ captureBtn.addEventListener("click", async () => {
   } catch (err) {
     hideLoading()
     alert("Something went wrong: " + err.message)
+    resetForm() // Re-show buttons on error
   }
 
   stopCamera()

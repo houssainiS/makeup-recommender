@@ -139,6 +139,7 @@
 /* Base Styles */
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 body {
@@ -1215,8 +1216,6 @@ body {
   border-radius: var(--radius-sm);
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
-
-
 
 .legend-color.detected {
   background: var(--success-500);
