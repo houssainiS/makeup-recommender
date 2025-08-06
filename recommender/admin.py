@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth.models import Group
 from .models import Visitor, FaceAnalysis , Feedback
 
 @admin.register(Visitor)
@@ -21,3 +22,11 @@ class FeedbackAdmin(admin.ModelAdmin):
     list_filter = ('feedback_type', 'created_at')
     search_fields = ('dislike_reason',)
     readonly_fields = ('created_at',)
+
+# Change admin site headers and titles
+admin.site.site_header = "Webixia"
+admin.site.site_title = "Webixia"
+admin.site.index_title = "Welcome to Skin Analyzer Dashboard"
+
+# Remove Groups from admin
+admin.site.unregister(Group)
