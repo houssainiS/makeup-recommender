@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.models import Group
-from .models import Visitor, FaceAnalysis , Feedback , AllowedOrigin
+from .models import Visitor, FaceAnalysis , Feedback , AllowedOrigin ,Shop , PageContent ,Purchase
 
 @admin.register(Visitor)
 class VisitorAdmin(admin.ModelAdmin):
@@ -36,3 +36,33 @@ admin.site.unregister(Group)
 class AllowedOriginAdmin(admin.ModelAdmin):
     list_display = ("url", "created_at")
     search_fields = ("url",)
+
+
+
+###webhooks#####
+
+@admin.register(Shop)
+class ShopAdmin(admin.ModelAdmin):
+    list_display = ('domain', 'installed_at', 'is_active')
+    search_fields = ("domain",)
+
+
+@admin.register(PageContent)
+class PageContentAdmin(admin.ModelAdmin):
+    list_display = ('title', 'updated_at')  # show these columns in admin list
+    ordering = ('-updated_at',)  # newest first
+
+
+@admin.register(Purchase)
+class PurchaseAdmin(admin.ModelAdmin):
+    list_display = (
+        "email",
+        "product_name",
+        "purchase_date",
+        "usage_duration_days",
+        "notified",
+        "expiry_date",
+    )
+    list_filter = ("notified", "purchase_date")
+    search_fields = ("email", "product_name", "order_id")
+    readonly_fields = ("expiry_date",)

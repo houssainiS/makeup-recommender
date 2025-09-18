@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeautyAI - Successfully Installed</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            /* Updated to clean white background like Shopify */
+            background: #f1f2f3;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 8px;
+            /* Updated to Shopify's clean shadow style */
+            box-shadow: 0 1px 0 rgba(22, 29, 37, 0.05);
+            border: 1px solid #e1e3e5;
+            max-width: 700px;
+            width: 100%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        /* Replaced colorful header with clean white Shopify-style header */
+        .header {
+            background: white;
+            color: #202223;
+            padding: 40px 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid #e1e3e5;
+        }
+
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            /* Updated to Shopify's success green */
+            background: #00a651;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .success-icon svg {
+            width: 32px;
+            height: 32px;
+            fill: white;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            /* Updated to Shopify's primary text color */
+            color: #202223;
+        }
+
+        .header .subtitle {
+            font-size: 16px;
+            /* Updated to Shopify's secondary text color */
+            color: #6d7175;
+            font-weight: 400;
+        }
+
+        /* Added primary actions section for button reordering */
+        .primary-actions {
+            padding: 30px;
+            background: white;
+            border-bottom: 1px solid #e1e3e5;
+        }
+
+        .primary-actions h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #202223;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .welcome-message {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .welcome-message h2 {
+            font-size: 22px;
+            color: #202223;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .welcome-message p {
+            font-size: 15px;
+            color: #6d7175;
+            line-height: 1.6;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .feature {
+            /* Updated to Shopify's subtle card background */
+            background: #fafbfb;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e1e3e5;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(22, 29, 37, 0.1);
+        }
+
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            /* Updated to Shopify's primary green */
+            background: #008060;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+        }
+
+        .feature-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+
+        .feature h3 {
+            font-size: 16px;
+            color: #202223;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .feature p {
+            font-size: 13px;
+            color: #6d7175;
+            line-height: 1.5;
+        }
+
+        .secondary-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+            min-height: 36px;
+            text-align: center;
+        }
+
+        /* Updated primary button to Shopify's primary style */
+        .btn-primary {
+            background: #008060;
+            color: white;
+            border: 1px solid #008060;
+        }
+
+        .btn-primary:hover {
+            background: #004c3f;
+            border-color: #004c3f;
+        }
+
+        /* Updated secondary button to Shopify's secondary style */
+        .btn-secondary {
+            background: white;
+            color: #323232;
+            border: 1px solid #c9cccf;
+        }
+
+        .btn-secondary:hover {
+            background: #f6f6f7;
+            border-color: #8c9196;
+        }
+
+        /* Added success state styling */
+        .btn-success {
+            background: #e8f7ed;
+            color: #2e7d32;
+            border: 1px solid #27ae60;
+        }
+
+        .success-message {
+            margin-top: 12px;
+            padding: 12px;
+            background: #e8f7ed;
+            border: 1px solid #27ae60;
+            border-radius: 6px;
+            color: #2e7d32;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .footer {
+            background: #fafbfb;
+            padding: 20px 30px;
+            text-align: center;
+            border-top: 1px solid #e1e3e5;
+        }
+
+        .footer p {
+            font-size: 13px;
+            color: #6d7175;
+        }
+
+        .footer a {
+            color: #008060;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .header, .primary-actions, .content {
+                padding: 20px;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+            
+            .secondary-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Clean white header with success state -->
+        <div class="header">
+            <div class="success-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                </svg>
+            </div>
+            <h1>BeautyAI</h1>
+            <p class="subtitle">Successfully Installed!</p>
+        </div>
+
+        <!-- Primary actions section with reordered buttons -->
+        <div class="primary-actions">
+            <h3>Complete Your Setup</h3>
+            <div class="action-buttons">
+                <!-- First button: Create Page + Add Nav Link -->
+                <a href="/create_page/?shop={{ shop }}" class="btn {% if page_created %}btn-success{% else %}btn-primary{% endif %}">
+                    {% if page_created %}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                        </svg>
+                        Page + Nav Link Created
+                    {% else %}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                        Create Page + Add Nav Link
+                    {% endif %}
+                </a>
+
+                <!-- Second button: Open Theme Editor -->
+                {% if theme_editor_link %}
+                <a href="{{ theme_editor_link }}" target="_blank" class="btn btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                    </svg>
+                    Open Theme Editor & Add App Block
+                </a>
+                {% else %}
+                <div class="btn btn-secondary" style="opacity: 0.6; cursor: not-allowed;">
+                    Theme Editor link not available
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Success message for page creation -->
+            {% if page_created %}
+            <div class="success-message">
+                ✅ Your "Face Analyzer" page and navigation link have been created successfully.
+            </div>
+            {% endif %}
+
+            {% if messages %}
+            <div style="margin-top: 12px;">
+                {% for message in messages %}
+                <div class="success-message">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="content">
+            <div class="welcome-message">
+                <h2>Welcome to the Future of Beauty</h2>
+                <p>Thank you for installing BeautyAI! Your customers can now experience personalized beauty recommendations powered by advanced AI technology.</p>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    </div>
+                    <h3>AI Face Analysis</h3>
+                    <p>Advanced facial recognition technology analyzes skin tone, features, and preferences</p>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                    </div>
+                    <h3>Smart Recommendations</h3>
+                    <p>Personalized product suggestions that match your customers' unique beauty needs</p>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z"/>
+                        </svg>
+                    </div>
+                    <h3>Boost Sales</h3>
+                    <p>Increase conversion rates with targeted recommendations and enhanced customer experience</p>
+                </div>
+            </div>
+
+            <div class="secondary-actions">
+                <a href="https://beautyai.duckdns.org/" target="_blank" class="btn btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                    </svg>
+                    Visit BeautyAI Dashboard
+                </a>
+                <a href="{% url 'documentation' %}" target="_blank" class="btn btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                    </svg>
+                    View Documentation
+                </a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Powered by <a href="https://www.creation-site-web.tn/" target="_blank">Webixia</a> • Learn more <a href="{% url 'privacy_policy' %}" target="_blank">Privacy Policy</a> </p>
+        </div>
+    </div>
+</body>
+</html>

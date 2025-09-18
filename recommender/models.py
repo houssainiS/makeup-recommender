@@ -49,3 +49,46 @@ class AllowedOrigin(models.Model):
 
     def __str__(self):
         return self.url
+    
+
+####webhook models#######
+
+from django.db import models
+
+class Shop(models.Model):
+    domain = models.CharField(max_length=255, unique=True)
+    offline_token = models.TextField(blank=True, null=True)  # Permanent token
+    online_token = models.TextField(blank=True, null=True)   # Short-lived token
+    installed_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)  # Track active/inactive status
+    theme_editor_link = models.URLField(blank=True, null=True)  # Store Theme Editor deep link
+    metafield_definition_id = models.CharField(max_length=255, blank=True, null=True)  # 👈 Store definition ID
+
+    def __str__(self):
+        return self.domain
+
+
+
+class PageContent(models.Model):
+    title = models.CharField(max_length=200, default="Face Analyzer")
+    body = models.TextField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+
+#### notifciation system ####
+from django.utils import timezone
+
+class Purchase(models.Model):
+    email = models.EmailField()
+    order_id = models.CharField(max_length=255, null=True, blank=True)
+    product_id = models.CharField(max_length=255)
+    product_name = models.CharField(max_length=255)
+    purchase_date = models.DateTimeField(default=timezone.now)
+    usage_duration_days = models.IntegerField(default=0)
+    notified = models.BooleanField(default=False)
+
+    def expiry_date(self):
+        return self.purchase_date + timezone.timedelta(days=self.usage_duration_days)

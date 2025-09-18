@@ -9,9 +9,9 @@ import gc  # Added garbage collection import
 
 from recommender.AImodels.ml_model import predict
 from recommender.AImodels.yolo_model import detect_skin_defects_yolo
-from recommender.AImodels.segment_skin_conditions_yolo import segment_skin_conditions  # updated to return structured results
+from recommender.AImodels.segment_skin_conditions_yolo import segment_skin_conditions  
 
-# NEW: import tips dictionaries
+#import tips dictionaries
 from recommender.tips import SKIN_TYPE_TIPS, EYE_COLOR_TIPS, ACNE_TIPS, SEGMENTATION_TIPS, YOLO_TIPS
 
 from .models import FaceAnalysis, Feedback
@@ -311,3 +311,328 @@ def submit_feedback(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid HTTP method"}, status=405)
+
+
+##############webhooks############
+
+import os
+import requests
+from django.shortcuts import redirect, render
+from django.conf import settings
+import urllib.parse
+from django.http import JsonResponse
+from django.contrib import messages
+from django.views.decorators.csrf import csrf_exempt
+
+from .models import Shop, PageContent, Purchase
+from .webhooks import register_uninstall_webhook, fetch_usage_duration
+from .shopify_navigation import create_page  # only import the working function
+
+# Load from environment variables with fallback
+SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY", "fallback-key-for-dev")
+SHOPIFY_API_SECRET = os.getenv("SHOPIFY_API_SECRET", "fallback-secret-for-dev")
+
+
+def app_entry(request):
+    shop = request.GET.get("shop")
+    if not shop:
+        return render(request, "error.html", {"message": "Missing shop parameter"})
+
+    # Check if page creation flag was passed
+    page_created = request.GET.get("page_created") == "1"
+
+    try:
+        shop_obj = Shop.objects.get(domain=shop, is_active=True)
+
+        return render(
+            request,
+            "recommender/shopify_install_page.html",
+            {
+                "shop": shop,
+                "theme_editor_link": shop_obj.theme_editor_link,
+                "page_created": page_created,
+            },
+        )
+    except Shop.DoesNotExist:
+        return redirect(f"/start_auth/?shop={shop}")
+
+
+def oauth_callback(request):
+    """
+    Handles Shopify OAuth callback.
+    Saves/reactivates the shop, registers uninstall webhook and orders/paid webhook,
+    and creates/pins the 'Product Usage Duration' metafield.
+    """
+    try:
+        shop = request.GET.get("shop")
+        code = request.GET.get("code")
+
+        if not shop or not code:
+            return JsonResponse({"error": "Missing shop or code"}, status=400)
+
+        # Exchange code for access token
+        response = requests.post(
+            f"https://{shop}/admin/oauth/access_token",
+            data={
+                "client_id": SHOPIFY_API_KEY,
+                "client_secret": SHOPIFY_API_SECRET,
+                "code": code,
+            },
+        )
+        data = response.json()
+        offline_token = data.get("access_token")
+        online_token = data.get("online_access_info", {}).get("access_token")
+
+        if not offline_token:
+            return JsonResponse({"error": "OAuth failed", "details": data}, status=400)
+
+        # Save/reactivate shop
+        shop_obj, created = Shop.objects.update_or_create(
+            domain=shop,
+            defaults={
+                "offline_token": offline_token,
+                "online_token": online_token,
+                "is_active": True,
+            },
+        )
+
+        # Register uninstall webhook
+        register_uninstall_webhook(shop, offline_token)
+
+        # --- Register orders/paid webhook for notification system ---
+        register_orders_paid_webhook(shop, offline_token)
+
+        # --- GraphQL headers ---
+        graphql_url = f"https://{shop}/admin/api/2025-07/graphql.json"
+        headers = {
+            "X-Shopify-Access-Token": offline_token,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        # --- Check for existing metafield definition ---
+        definition_id = None
+        try:
+            definition_query = """
+            {
+              metafieldDefinitions(first: 10, ownerType: PRODUCT, namespace: "custom", key: "usage_duration") {
+                edges { node { id name namespace key } }
+              }
+            }
+            """
+            def_response = requests.post(graphql_url, headers=headers, json={"query": definition_query})
+            edges = def_response.json().get("data", {}).get("metafieldDefinitions", {}).get("edges", [])
+            if edges:
+                definition_id = edges[0]["node"]["id"]
+            else:
+                create_query = """
+                mutation {
+                  metafieldDefinitionCreate(definition: {
+                    name: "Product Usage Duration (in days)"
+                    namespace: "custom"
+                    key: "usage_duration"
+                    type: "number_integer"
+                    description: "How many days will use the product."
+                    ownerType: PRODUCT
+                  }) {
+                    createdDefinition { id name namespace key type { name } }
+                    userErrors { field message }
+                  }
+                }
+                """
+                gql_response = requests.post(graphql_url, headers=headers, json={"query": create_query})
+                definition_id = gql_response.json().get("data", {}).get("metafieldDefinitionCreate", {}).get("createdDefinition", {}).get("id")
+        except Exception as e:
+            print(f"[WARNING] Error checking/creating metafield definition: {e}")
+
+        # Pin the metafield definition
+        if definition_id:
+            try:
+                shop_obj.metafield_definition_id = definition_id
+                shop_obj.save(update_fields=["metafield_definition_id"])
+
+                pin_query = """
+                mutation metafieldDefinitionPin($definitionId: ID!) {
+                  metafieldDefinitionPin(definitionId: $definitionId) {
+                    pinnedDefinition { id name namespace key }
+                    userErrors { field message }
+                  }
+                }
+                """
+                requests.post(graphql_url, headers=headers, json={"query": pin_query, "variables": {"definitionId": definition_id}})
+            except Exception as pin_e:
+                print(f"[WARNING] Failed to pin usage_duration metafield: {pin_e}")
+
+        # Render install page
+        return render(
+            request,
+            "recommender/shopify_install_page.html",
+            {"shop": shop, "theme_editor_link": shop_obj.theme_editor_link},
+        )
+
+    except Exception as e:
+        print(f"[ERROR] Exception in oauth_callback: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"error": f"Server error: {e}"}, status=500)
+
+
+def create_shopify_page(request):
+    """
+    Creates the Face Analyzer page and navigation link manually
+    when merchant clicks the button.
+    """
+    shop = request.GET.get("shop")
+    if not shop:
+        return render(request, "error.html", {"message": "Missing shop parameter"})
+
+    try:
+        shop_obj = Shop.objects.get(domain=shop, is_active=True)
+        page_content = PageContent.objects.first()
+        if not page_content:
+            page_content = PageContent(title="Face Analyzer", body="<h1>Face Analyzer</h1>")
+
+        page, deep_link = create_page(
+            shop,
+            shop_obj.offline_token,
+            title=page_content.title,
+            body=page_content.body,
+            api_key=SHOPIFY_API_KEY,
+            block_type="test",
+        )
+
+        if page:
+            shop_obj.theme_editor_link = deep_link
+            shop_obj.save()
+            messages.success(request, "✅ Page created and added to menu successfully.")
+        else:
+            messages.error(request, "⚠️ Failed to create page or add to menu.")
+
+        return redirect(f"/app_entry/?shop={shop}&page_created=1")
+
+    except Shop.DoesNotExist:
+        return redirect(f"/start_auth/?shop={shop}")
+
+
+def start_auth(request):
+    """
+    Starts the Shopify OAuth installation flow.
+    Redirects merchant to Shopify to approve the app.
+    """
+    try:
+        shop = request.GET.get("shop")
+        if not shop:
+            return render(request, "error.html", {"message": "Missing shop parameter"})
+
+        redirect_uri = settings.BASE_URL + "/auth/callback/"
+        scopes = (
+            "read_products,write_products,read_metafields,write_metafields,write_content,"
+            "write_online_store_pages,read_online_store_pages,read_online_store_navigation,"
+            "write_online_store_navigation,read_themes,write_themes"
+        )
+
+        auth_url = (
+            f"https://{shop}/admin/oauth/authorize?"
+            f"client_id={SHOPIFY_API_KEY}&"
+            f"scope={scopes}&"
+            f"redirect_uri={urllib.parse.quote(redirect_uri)}&"
+            f"state=12345"
+        )
+
+        return redirect(auth_url)
+
+    except Exception as e:
+        print(f"[ERROR] Exception in start_auth: {e}")
+        return render(request, "error.html", {"message": f"Server error: {e}"})
+
+
+### docs & policies
+
+def documentation(request):
+    """
+    Render the documentation.
+    """
+    return render(request, "recommender/documentation.html")
+
+
+def privacy_policy(request):
+    """
+    Render the privacy_policy.
+    """
+    return render(request, "recommender/privacy-policy.html")
+
+
+# =========================
+# 📌 New: Orders/Paid Webhook Registration & Endpoint
+# =========================
+
+def register_orders_paid_webhook(shop_domain, access_token):
+    """
+    Registers the 'orders/paid' webhook for a shop.
+    """
+    url = f"https://{shop_domain}/admin/api/2023-10/webhooks.json"
+    headers = {
+        "X-Shopify-Access-Token": access_token,
+        "Content-Type": "application/json"
+    }
+    data = {
+        "webhook": {
+            "topic": "orders/paid",
+            "address": f"{settings.BASE_URL}/webhooks/order_paid/",
+            "format": "json"
+        }
+    }
+
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        print("[Orders/Paid Webhook Registration] Response:", response.json())
+    except Exception as e:
+        print("[Orders/Paid Webhook Registration] Failed:", str(e))
+        print("[Orders/Paid Webhook Registration] Raw response:", getattr(response, "text", "No response"))
+
+from django.utils import timezone
+
+@csrf_exempt
+def order_paid_webhook(request):
+    """
+    Endpoint to receive Shopify 'orders/paid' webhook.
+    Saves customer email, product info, and usage duration for notifications.
+    """
+    from .webhooks import verify_webhook  # import here to avoid circular import
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    hmac_header = request.headers.get("X-Shopify-Hmac-Sha256")
+    if not hmac_header or not verify_webhook(request.body, hmac_header):
+        return JsonResponse({"error": "Invalid webhook"}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        shop_domain = request.headers.get("X-Shopify-Shop-Domain")
+        shop = Shop.objects.filter(domain=shop_domain).first()
+        if not shop:
+            return JsonResponse({"error": "Shop not found"}, status=404)
+
+        email = data.get("email")
+        order_id = data.get("id")
+        line_items = data.get("line_items", [])
+
+        for item in line_items:
+            product_id = item.get("product_id")
+            product_name = item.get("title")
+            usage_days = fetch_usage_duration(product_id, shop_domain)
+
+            Purchase.objects.create(
+                email=email,
+                order_id=str(order_id),
+                product_id=str(product_id),
+                product_name=product_name,
+                purchase_date=timezone.now(),
+                usage_duration_days=usage_days,
+            )
+
+    except Exception as e:
+        print("[Orders/Paid Webhook] Exception:", e)
+        return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"status": "ok"}, status=200)

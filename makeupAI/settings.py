@@ -101,3 +101,22 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 ###
 CORS_ALLOWED_ORIGINS = []
 CORS_ALLOW_CREDENTIALS = True
+
+
+
+#### email
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "housai.email@gmail.com"
+EMAIL_HOST_PASSWORD = "qrtxuaoiwwzgqrgr"
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
+INSTALLED_APPS += ['django_crontab']
+
+CRONJOBS = [
+    ('*/10 * * * *', 'recommender.notifications.send_usage_expiry_notifications'),
+]
