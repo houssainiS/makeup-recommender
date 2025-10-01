@@ -11,8 +11,8 @@ from recommender.AImodels.ml_model import predict
 from recommender.AImodels.yolo_model import detect_skin_defects_yolo
 from recommender.AImodels.segment_skin_conditions_yolo import segment_skin_conditions  
 
-#import tips dictionaries
-from recommender.tips import SKIN_TYPE_TIPS, EYE_COLOR_TIPS, ACNE_TIPS, SEGMENTATION_TIPS, YOLO_TIPS
+
+
 
 from .models import FaceAnalysis, Feedback
 
@@ -64,14 +64,13 @@ def upload_photo(request):
             buffered = io.BytesIO()
             cropped_face.save(buffered, format="JPEG")
             cropped_face_base64 = base64.b64encode(buffered.getvalue()).decode()
-            buffered.close()  # Close BytesIO buffer
+            buffered.close()
             buffered = None
 
             # Eye colors (top predictions or "Eyes Closed")
             left_eye_color = preds.get("left_eye_color", "Unknown")
             right_eye_color = preds.get("right_eye_color", "Unknown")
 
-            # Title-case eye colors if eyes are not closed
             if isinstance(left_eye_color, str) and "closed" not in left_eye_color.lower():
                 left_eye_color = left_eye_color.title()
             if isinstance(right_eye_color, str) and "closed" not in right_eye_color.lower():
@@ -81,7 +80,6 @@ def upload_photo(request):
             acne_pred = preds.get("acne_pred", "Unknown")
             acne_confidence = preds.get("acne_confidence", 0)
 
-            # --- Map acne severity codes to labels ---
             acne_mapping = {
                 "0": "Clear",
                 "1": "Mild",
@@ -91,109 +89,27 @@ def upload_photo(request):
             }
             acne_pred_label = acne_mapping.get(str(acne_pred).lower(), "Unknown")
 
-            # Run YOLOv8 on cropped face to detect detailed skin defects
+            # Run YOLOv8 on cropped face
             yolo_boxes, yolo_annotated_image = detect_skin_defects_yolo(cropped_face)
 
             buffered_annot = io.BytesIO()
             yolo_annotated_image.save(buffered_annot, format="JPEG")
             yolo_annotated_base64 = base64.b64encode(buffered_annot.getvalue()).decode()
-            buffered_annot.close()  # Close BytesIO buffer
+            buffered_annot.close()
             buffered_annot = None
-            yolo_annotated_image.close()  # Close PIL image
+            yolo_annotated_image.close()
             yolo_annotated_image = None
 
-            # Run YOLOv8 segmentation model on cropped face
+            # Run YOLOv8 segmentation
             segmented_img, segmentation_results = segment_skin_conditions(cropped_face)
             
             buffered_seg = io.BytesIO()
             segmented_img.save(buffered_seg, format="JPEG")
             segmented_base64 = base64.b64encode(buffered_seg.getvalue()).decode()
-            buffered_seg.close()  # Close BytesIO buffer
+            buffered_seg.close()
             buffered_seg = None
-            segmented_img.close()  # Close PIL image
+            segmented_img.close()
             segmented_img = None
-
-            # ===== Generate Tips (using tips.py) =====
-            tips = []
-
-            # Skin type tip
-            if skin_type in SKIN_TYPE_TIPS:
-                tips.append(SKIN_TYPE_TIPS[skin_type])
-
-            # Eye color tip (one unified tip even if colors differ)
-            def _clean_eye(c):
-                if not isinstance(c, str):
-                    return None
-                c2 = c.strip()
-                if not c2 or c2.lower() == "unknown" or "closed" in c2.lower():
-                    return None
-                return c2
-
-            left_clean = _clean_eye(left_eye_color)
-            right_clean = _clean_eye(right_eye_color)
-
-            unified_eye = None
-            if left_clean and right_clean:
-                unified_eye = left_clean if left_clean == right_clean else left_clean  # pick left by default
-            else:
-                unified_eye = left_clean or right_clean
-
-            if unified_eye in EYE_COLOR_TIPS:
-                tips.append(EYE_COLOR_TIPS[unified_eye])
-
-            # Acne tip (use mapped label -> lowercase key for ACNE_TIPS)
-            acne_key = acne_pred_label.lower()
-            if acne_key in ACNE_TIPS:
-                tips.append(ACNE_TIPS[acne_key])
-
-            # Segmentation tips (supports list[str], list[dict], or dict[label->bool])
-            seg_labels = []
-            if isinstance(segmentation_results, list):
-                for it in segmentation_results:
-                    if isinstance(it, str):
-                        seg_labels.append(it)
-                    elif isinstance(it, dict):
-                        for k in ("label", "name", "class_name", "class"):
-                            v = it.get(k)
-                            if isinstance(v, str):
-                                seg_labels.append(v)
-                                break
-            elif isinstance(segmentation_results, dict):
-                for k, v in segmentation_results.items():
-                    if bool(v):
-                        seg_labels.append(k)
-
-            for seg in seg_labels:
-                if seg in SEGMENTATION_TIPS:
-                    tips.append(SEGMENTATION_TIPS[seg])
-
-            # YOLO tips (supports list[str] or list[dict])
-            det_labels = []
-            if isinstance(yolo_boxes, list):
-                for box in yolo_boxes:
-                    if isinstance(box, str):
-                        det_labels.append(box)
-                    elif isinstance(box, dict):
-                        # usual keys: 'label' or 'name'
-                        for k in ("label", "name", "class_name", "class"):
-                            v = box.get(k)
-                            if isinstance(v, str):
-                                det_labels.append(v)
-                                break
-
-            for lab in det_labels:
-                if lab in YOLO_TIPS:
-                    tips.append(YOLO_TIPS[lab])
-
-            # De-duplicate tips while preserving order
-            seen = set()
-            unique_tips = []
-            for t in tips:
-                if t not in seen:
-                    unique_tips.append(t)
-                    seen.add(t)
-            if not unique_tips:
-                unique_tips.append("Your skin looks balanced! Use gentle skincare and enhance naturally with light makeup.")
 
             # ----- Log FaceAnalysis event -----
             session_key = request.session.session_key
@@ -204,17 +120,16 @@ def upload_photo(request):
             ip = get_client_ip(request)
             device_type = get_device_type(request)
 
-            # Create a FaceAnalysis record to count this analysis event
             FaceAnalysis.objects.create(
                 session_key=session_key,
                 ip_address=ip,
                 device_type=device_type
             )
 
-            # Prepare response data
+            # Response data (NO backend tips anymore)
             response_data = {
                 "skin_type": skin_type.title(),
-                "acne_pred": acne_pred_label,  # <--- mapped label
+                "acne_pred": acne_pred_label,
                 "acne_confidence": round(acne_confidence, 4),
                 "cropped_face": f"data:image/jpeg;base64,{cropped_face_base64}",
                 "type_probs": preds.get("type_probs", []),
@@ -223,8 +138,7 @@ def upload_photo(request):
                 "left_eye_color": left_eye_color,
                 "right_eye_color": right_eye_color,
                 "segmentation_overlay": f"data:image/jpeg;base64,{segmented_base64}",
-                "segmentation_results": segmentation_results,  # <--- added
-                "tips": unique_tips  # <--- added
+                "segmentation_results": segmentation_results
             }
 
             if image:
@@ -232,7 +146,6 @@ def upload_photo(request):
             if cropped_face:
                 cropped_face.close()
             
-            # Clean up variables
             del image, cropped_face
             if yolo_annotated_image:
                 del yolo_annotated_image
@@ -240,7 +153,6 @@ def upload_photo(request):
                 del segmented_img
             gc.collect()
 
-            # ----- Return the analysis results -----
             return JsonResponse(response_data)
 
         except Exception as e:
@@ -259,10 +171,8 @@ def upload_photo(request):
             if buffered_seg:
                 buffered_seg.close()
             gc.collect()
-            # Return error message with 500 status code on exceptions
             return JsonResponse({"error": str(e)}, status=500)
 
-    # Return error if request method is not POST
     return JsonResponse({"error": "Invalid request method"}, status=400)
 
 
@@ -325,7 +235,7 @@ from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import Shop, PageContent, Purchase
-from .webhooks import register_uninstall_webhook, fetch_usage_duration
+from .webhooks import register_uninstall_webhook, fetch_usage_duration , register_orders_updated_webhook
 from .shopify_navigation import create_page  # only import the working function
 
 # Load from environment variables with fallback
@@ -400,7 +310,7 @@ def oauth_callback(request):
         register_uninstall_webhook(shop, offline_token)
 
         # --- Register orders/paid webhook for notification system ---
-        register_orders_paid_webhook(shop, offline_token)
+        register_orders_updated_webhook(shop, offline_token)
 
         # --- GraphQL headers ---
         graphql_url = f"https://{shop}/admin/api/2025-07/graphql.json"
@@ -528,7 +438,7 @@ def start_auth(request):
         scopes = (
             "read_products,write_products,read_metafields,write_metafields,write_content,"
             "write_online_store_pages,read_online_store_pages,read_online_store_navigation,"
-            "write_online_store_navigation,read_themes,write_themes"
+            "write_online_store_navigation,read_themes,write_themes,read_orders,write_orders"
         )
 
         auth_url = (
@@ -562,77 +472,3 @@ def privacy_policy(request):
     return render(request, "recommender/privacy-policy.html")
 
 
-# =========================
-# 📌 New: Orders/Paid Webhook Registration & Endpoint
-# =========================
-
-def register_orders_paid_webhook(shop_domain, access_token):
-    """
-    Registers the 'orders/paid' webhook for a shop.
-    """
-    url = f"https://{shop_domain}/admin/api/2023-10/webhooks.json"
-    headers = {
-        "X-Shopify-Access-Token": access_token,
-        "Content-Type": "application/json"
-    }
-    data = {
-        "webhook": {
-            "topic": "orders/paid",
-            "address": f"{settings.BASE_URL}/webhooks/order_paid/",
-            "format": "json"
-        }
-    }
-
-    try:
-        response = requests.post(url, json=data, headers=headers)
-        print("[Orders/Paid Webhook Registration] Response:", response.json())
-    except Exception as e:
-        print("[Orders/Paid Webhook Registration] Failed:", str(e))
-        print("[Orders/Paid Webhook Registration] Raw response:", getattr(response, "text", "No response"))
-
-from django.utils import timezone
-
-@csrf_exempt
-def order_paid_webhook(request):
-    """
-    Endpoint to receive Shopify 'orders/paid' webhook.
-    Saves customer email, product info, and usage duration for notifications.
-    """
-    from .webhooks import verify_webhook  # import here to avoid circular import
-    if request.method != "POST":
-        return JsonResponse({"error": "Method not allowed"}, status=405)
-
-    hmac_header = request.headers.get("X-Shopify-Hmac-Sha256")
-    if not hmac_header or not verify_webhook(request.body, hmac_header):
-        return JsonResponse({"error": "Invalid webhook"}, status=401)
-
-    try:
-        data = json.loads(request.body)
-        shop_domain = request.headers.get("X-Shopify-Shop-Domain")
-        shop = Shop.objects.filter(domain=shop_domain).first()
-        if not shop:
-            return JsonResponse({"error": "Shop not found"}, status=404)
-
-        email = data.get("email")
-        order_id = data.get("id")
-        line_items = data.get("line_items", [])
-
-        for item in line_items:
-            product_id = item.get("product_id")
-            product_name = item.get("title")
-            usage_days = fetch_usage_duration(product_id, shop_domain)
-
-            Purchase.objects.create(
-                email=email,
-                order_id=str(order_id),
-                product_id=str(product_id),
-                product_name=product_name,
-                purchase_date=timezone.now(),
-                usage_duration_days=usage_days,
-            )
-
-    except Exception as e:
-        print("[Orders/Paid Webhook] Exception:", e)
-        return JsonResponse({"error": str(e)}, status=500)
-
-    return JsonResponse({"status": "ok"}, status=200)
