@@ -22,10 +22,12 @@ class FaceAnalysis(models.Model):
     session_key = models.CharField(max_length=100)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     device_type = models.CharField(max_length=50)
+    domain = models.CharField(max_length=255, null=True, blank=True)  # 👈 Added field
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.ip_address} visited on {self.timestamp}"
+        return f"{self.ip_address} visited {self.domain or 'unknown'} on {self.timestamp}"
+
 
 class Feedback(models.Model):
     LIKE = 'like'
@@ -90,6 +92,7 @@ class Purchase(models.Model):
     purchase_date = models.DateTimeField(default=timezone.now)
     usage_duration_days = models.IntegerField(default=0)
     notified = models.BooleanField(default=False)
+    domain = models.CharField(max_length=255, null=True, blank=True)
 
     def expiry_date(self):
         return self.purchase_date + timezone.timedelta(days=self.usage_duration_days)
