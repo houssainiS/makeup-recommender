@@ -1,5 +1,8 @@
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 from django.http import JsonResponse
 from PIL import Image
 import base64
@@ -585,16 +588,15 @@ def privacy_policy(request):
 
 
 
-
-
 ############# dashboard #############
 from django.db.models import Count
 from datetime import timedelta
 from django.utils import timezone
-from django.contrib.admin.views.decorators import staff_member_required
 
-@staff_member_required
+@login_required
 def dashboard(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return redirect('staff_login')
     today = timezone.now().date()
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
@@ -660,3 +662,49 @@ def dashboard(request):
         "domain_filter": domain_filter,
     }
     return render(request, "recommender/dashboard.html", context)
+
+#to search face analysis by domain
+@login_required
+def search_domains(request):
+    domain_filter = request.GET.get('domain', '')
+    analysis_qs = FaceAnalysis.objects.all()
+
+    if domain_filter:
+        analysis_qs = analysis_qs.filter(domain__icontains=domain_filter)
+
+    domain_stats = (
+        analysis_qs.values("domain")
+        .annotate(total=Count("id"))
+        .order_by("-total")
+    )
+
+    return JsonResponse({"domains": list(domain_stats)})
+
+
+def staff_login(request):
+    # Already logged in? Send to dashboard
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    error = None
+
+    if request.method == "POST":
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            if user.is_staff or user.is_superuser:
+                login(request, user)
+                return redirect('dashboard')
+            else:
+                error = "You are not authorized to access the staff dashboard."
+        else:
+            error = "Invalid username or password."
+
+    return render(request, 'recommender/login.html', {'error': error})
+
+
+def staff_logout(request):
+    logout(request)
+    return redirect('staff_login')
