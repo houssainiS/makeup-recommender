@@ -31,6 +31,7 @@ def app_uninstalled(request):
     """
     Handles Shopify 'app/uninstalled' webhook.
     Marks the shop as inactive and deletes its saved metafield definition.
+    Also removes any stored theme editor deep link.
     """
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
@@ -97,10 +98,11 @@ def app_uninstalled(request):
         else:
             print("[Webhook] No metafield definition to delete.")
 
-        # --- Step 3: Mark shop inactive ---
+        # --- Step 3: Mark shop inactive & clear theme editor link ---
         shop_obj.is_active = False
-        shop_obj.save(update_fields=["is_active"])
-        print(f"[Webhook] App uninstalled from {shop_domain}, marked inactive")
+        shop_obj.theme_editor_link = None
+        shop_obj.save(update_fields=["is_active", "theme_editor_link"])
+        print(f"[Webhook] App uninstalled from {shop_domain}, marked inactive and cleared theme_editor_link")
 
     except Exception as e:
         print(f"[Webhook] Exception handling uninstall for {shop_domain}: {e}")
@@ -288,18 +290,22 @@ def order_updated(request):
             product_name = item.get("title")
             usage_days = fetch_usage_duration(product_id, shop_domain)
 
-            Purchase.objects.create(
-                email=email,
-                phone=phone,
-                order_id=str(order_id),
-                product_id=str(product_id),
-                product_name=product_name,
-                purchase_date=timezone.now(),
-                usage_duration_days=usage_days,
-                domain=shop_domain,
-            )
-            print(f"[Webhook] Saved purchase: {product_name} ({usage_days} days) "
-                  f"for email={email}, phone={phone}, domain={shop_domain}")
+            if usage_days and usage_days > 0:
+                Purchase.objects.create(
+                    email=email,
+                    phone=phone,
+                    order_id=str(order_id),
+                    product_id=str(product_id),
+                    product_name=product_name,
+                    purchase_date=timezone.now(),
+                    usage_duration_days=usage_days,
+                    domain=shop_domain,
+                )
+                print(f"[Webhook] ✅ Saved purchase: {product_name} ({usage_days} days) "
+                    f"for email={email}, phone={phone}, domain={shop_domain}")
+            else:
+                print(f"[Webhook] ⚠️ Skipped saving {product_name} — usage_duration={usage_days}")
+
 
     except Exception as e:
         print("[Orders/Updated Webhook] Exception:", e)
