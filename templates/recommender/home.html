@@ -22,13 +22,14 @@
                     <span class="brand-text">Beautyxia</span>
                 </div>
                 <div class="nav-links">
-                    <a href="#" class="nav-link">Home</a>
-                    <a href="#" class="nav-link">About</a>
+                    <a href="#home" class="nav-link">Home</a>
+                    <a href="#about" class="nav-link">About</a>
+                    <a href="#analyse" class="nav-link">Face analyse</a>
                 </div>
             </div>
         </nav>
 
-        <section class="hero-section">
+        <section class="hero-section" id="home">
             <div class="hero-content">
                 <div class="hero-badge">
                     <i class="fas fa-sparkles"></i>
@@ -39,20 +40,70 @@
                     Experience personalized beauty recommendations powered by advanced AI technology. 
                     Unlock your skin's potential with expert analysis and tailored skincare guidance.
                 </p>
-                <div class="hero-stats">
-                    <div class="stat-item">
-                        <div class="stat-number">15K+</div>
-                        <div class="stat-label">Trusted Users</div>
+
+                <div class="about-section" id="about">
+                    <div class="about-welcome">
+                        <h2>Welcome to Beautyxia – Your Smart AI Skin Expert</h2>
+                        <p>Discover your natural beauty with the power of AI. Beautyxia analyzes your face to understand your skin type and skin conditions, then recommends the best products just for you.</p>
                     </div>
-                    <div class="stat-divider"></div>
-                    <div class="stat-item">
-                        <div class="stat-number">98%</div>
-                        <div class="stat-label">Accuracy Rate</div>
+
+                    <div class="about-how">
+                        <div class="about-icon">
+                            <i class="fas fa-flower"></i>
+                        </div>
+                        <h3>How It Works</h3>
+                        <ul class="about-steps">
+                            <li>
+                                <span class="step-number">1</span>
+                                <span class="step-text">Take or upload a photo of your face</span>
+                            </li>
+                            <li>
+                                <span class="step-number">2</span>
+                                <span class="step-text">Let our AI scan and analyze your skin for signs of acne, redness, dark circles, wrinkles, and more</span>
+                            </li>
+                            <li>
+                                <span class="step-number">3</span>
+                                <span class="step-text">Get personalized skincare advice and product recommendations instantly</span>
+                            </li>
+                        </ul>
                     </div>
-                    <div class="stat-divider"></div>
-                    <div class="stat-item">
-                        <div class="stat-number">24/7</div>
-                        <div class="stat-label">Available</div>
+
+                    <div class="about-why">
+                        <div class="about-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <h3>Why Choose Beautyxia</h3>
+                        <div class="about-features">
+                            <div class="feature-item">
+                                <i class="fas fa-brain"></i>
+                                <span>Smart AI-driven analysis</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-bolt"></i>
+                                <span>Instant and accurate results</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-lock"></i>
+                                <span>100% private and secure</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-pump-soap"></i>
+                                <span>Trusted skincare recommendations</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-user-check"></i>
+                                <span>Personalized results for your unique skin</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-sync-alt"></i>
+                                <span>Constantly improving</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="about-cta">
+                        <p>Let Beautyxia be your personal beauty assistant — Start your free skin analysis today and see what your skin truly needs!</p>
                     </div>
                 </div>
             </div>
@@ -306,7 +357,7 @@
                     </div>
                 </div>
 
-                <div class="upload-card">
+                <div class="upload-card" id="analyse">
                     <div class="card-header">
                         <div class="header-icon-wrapper">
                             <div class="header-icon">
@@ -335,7 +386,16 @@
                                 </label>
                             </div>
                             <div class="photo-preview" id="photoPreview"></div>
-                            <button type="submit" class="btn btn-primary">
+                            <div class="privacy-agreement">
+                                <label class="privacy-checkbox-label">
+                                    <input type="checkbox" id="privacyCheckbox" class="privacy-checkbox">
+                                    <span class="privacy-text">
+                                        I agree to the processing of my photo for temporary analysis to receive beauty tips and product recommendations. I understand that my photo will not be stored.
+                                        <a href="https://beautyai.duckdns.org/privacy-policy/" target="_blank" class="privacy-link">Read our Privacy Policy</a> for more details.
+                                    </span>
+                                </label>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="analyzeBtn" disabled>
                                 <i class="fas fa-wand-magic-sparkles"></i>
                                 Analyze My Beauty Profile
                             </button>
@@ -381,6 +441,16 @@
 
                         <canvas id="canvas"></canvas>
                         
+                        <div class="privacy-agreement">
+                            <label class="privacy-checkbox-label">
+                                <input type="checkbox" id="cameraPrivacyCheckbox" class="privacy-checkbox">
+                                <span class="privacy-text">
+                                    I agree to the processing of my photo for temporary analysis to receive beauty tips and product recommendations. I understand that my photo will not be stored.
+                                    <a href="https://beautyai.duckdns.org/privacy-policy/" target="_blank" class="privacy-link">Read our Privacy Policy</a> for more details.
+                                </span>
+                            </label>
+                        </div>
+                        
                         <form id="cameraForm" method="post" enctype="multipart/form-data" action="{% url 'upload_photo' %}" style="display:none;">
                             {% csrf_token %}
                             <input type="hidden" name="photo" id="capturedPhoto">
@@ -398,7 +468,7 @@
                     </div>
                     <span class="brand-text">Beautyxia</span>
                 </div>
-                <p>&copy; 2025 Beautyxia by Houssaini Slimen. All rights reserved.</p>
+                <p>&copy; 2025 Beautyxia by <a class="privacy-link" href="https://www.creation-site-web.tn" target="_blank">Webixia</a>. All rights reserved.</p>
             </div>
         </footer>
     </div>

@@ -1,3 +1,24 @@
+document.addEventListener("DOMContentLoaded", () => {
+  const navLinks = document.querySelectorAll('.nav-link[href^="#"]')
+  const navbarHeight = document.querySelector(".app-navbar").offsetHeight
+
+  navLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault()
+      const targetId = link.getAttribute("href").substring(1)
+      const targetSection = document.getElementById(targetId)
+
+      if (targetSection) {
+        const targetPosition = targetSection.getBoundingClientRect().top + window.pageYOffset - navbarHeight
+        window.scrollTo({
+          top: targetPosition,
+          behavior: "smooth",
+        })
+      }
+    })
+  })
+})
+
 const startCameraBtn = document.getElementById("startCameraBtn")
 const video = document.getElementById("video")
 const captureBtn = document.getElementById("captureBtn")
@@ -10,6 +31,10 @@ const photoPreview = document.getElementById("photoPreview")
 const loadingSection = document.getElementById("loadingSection")
 const ajaxResults = document.getElementById("ajaxResults")
 
+const privacyCheckbox = document.getElementById("privacyCheckbox")
+const analyzeBtn = document.getElementById("analyzeBtn")
+const cameraPrivacyCheckbox = document.getElementById("cameraPrivacyCheckbox")
+
 // New feedback elements
 const feedbackSection = document.getElementById("feedbackSection")
 const likeBtn = document.getElementById("likeBtn")
@@ -21,9 +46,19 @@ const feedbackMessage = document.getElementById("feedbackMessage")
 
 let stream
 let beautyTips // Declare the beautyTips variable
+let isCameraActive = false
 
 // Import or declare generateTips function here
 // Placeholder for the real generateTips function from tips.js
+
+privacyCheckbox.addEventListener("change", (e) => {
+  analyzeBtn.disabled = !e.target.checked
+})
+
+cameraPrivacyCheckbox.addEventListener("change", (e) => {
+  // Enable capture button only if camera is active AND privacy is checked
+  captureBtn.disabled = !(isCameraActive && e.target.checked)
+})
 
 // File input preview
 fileInput.addEventListener("change", (e) => {
@@ -218,6 +253,10 @@ function showResults(data) {
   dislikeReason.value = ""
   likeBtn.disabled = false
   dislikeBtn.disabled = false
+
+  setTimeout(() => {
+    ajaxResults.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, 100)
 }
 
 function generateRecommendation(data) {
@@ -261,6 +300,11 @@ function resetForm() {
   document.getElementById("acneAnalysisSection").style.display = "none"
   document.getElementById("segmentationSection").style.display = "none"
 
+  privacyCheckbox.checked = false
+  analyzeBtn.disabled = true
+
+  cameraPrivacyCheckbox.checked = false
+
   // Reset feedback section
   feedbackSection.style.display = "none"
   feedbackMessage.style.display = "none"
@@ -282,7 +326,8 @@ startCameraBtn.addEventListener("click", async () => {
     })
     video.srcObject = stream
     video.parentElement.style.display = "block"
-    captureBtn.disabled = false
+    isCameraActive = true
+    captureBtn.disabled = !cameraPrivacyCheckbox.checked
     startCameraBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Camera'
     startCameraBtn.onclick = stopCamera
   } catch (err) {
@@ -295,6 +340,7 @@ function stopCamera() {
   if (stream) {
     stream.getTracks().forEach((track) => track.stop())
     video.parentElement.style.display = "none"
+    isCameraActive = false
     captureBtn.disabled = true
     startCameraBtn.innerHTML = '<i class="fas fa-video"></i> Start Camera'
     startCameraBtn.onclick = () => startCameraBtn.click() // Re-attach original click handler
