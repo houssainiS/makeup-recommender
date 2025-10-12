@@ -17,7 +17,6 @@ html {
   background-color: #0f172a;
 }
 
-
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 15px;
@@ -80,6 +79,14 @@ body {
   color: white;
   font-size: 16px;
   box-shadow: 0 4px 20px rgba(255, 27, 141, 0.4);
+}
+
+/* Added styles for logo image to fit properly in brand icon container */
+.brand-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
 }
 
 .nav-links {
