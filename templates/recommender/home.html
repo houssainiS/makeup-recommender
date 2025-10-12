@@ -4,9 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beautyxia - Your Personal Makeup Assistant</title>
+    <title>Beautyxia - Your Personal Beauty Assistant</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
@@ -14,7 +17,7 @@
             <div class="nav-content">
                 <div class="nav-brand">
                     <div class="brand-icon">
-                        <i class="fas fa-sparkles"></i>
+                        <i class="fas fa-gem"></i>
                     </div>
                     <span class="brand-text">Beautyxia</span>
                 </div>
@@ -27,28 +30,29 @@
 
         <section class="hero-section">
             <div class="hero-content">
-                <div class="hero-card">
-                    <div class="hero-icon">
-                        <i class="fas fa-magic"></i>
+                <div class="hero-badge">
+                    <i class="fas fa-sparkles"></i>
+                    <span>AI-Powered Analysis</span>
+                </div>
+                <h1 class="hero-title">Discover your unique beauty profile</h1>
+                <p class="hero-description">
+                    Experience personalized beauty recommendations powered by advanced AI technology. 
+                    Unlock your skin's potential with expert analysis and tailored skincare guidance.
+                </p>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">15K+</div>
+                        <div class="stat-label">Trusted Users</div>
                     </div>
-                    <h1 class="hero-title">AI-Powered Beauty Analysis</h1>
-                    <p class="hero-description">
-                        Get personalized makeup recommendations based on advanced AI analysis of your skin type, 
-                        eye color, and facial features.
-                    </p>
-                    <div class="hero-stats">
-                        <div class="stat-item">
-                            <div class="stat-number">10K+</div>
-                            <div class="stat-label">Happy Users</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number">95%</div>
-                            <div class="stat-label">Accuracy</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number">24/7</div>
-                            <div class="stat-label">Available</div>
-                        </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <div class="stat-number">98%</div>
+                        <div class="stat-label">Accuracy Rate</div>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">Available</div>
                     </div>
                 </div>
             </div>
@@ -59,20 +63,22 @@
                 {% if predicted_type and acne_pred and recommendation %}
                 <div class="results-card active">
                     <div class="card-header">
-                        <div class="header-icon">
-                            <i class="fas fa-check-circle"></i>
+                        <div class="header-icon-wrapper">
+                            <div class="header-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
                         </div>
                         <div class="header-text">
-                            <h2>Analysis Complete</h2>
-                            <p>Your personalized beauty profile is ready</p>
+                            <h2>Your Beauty Profile</h2>
+                            <p>Personalized analysis complete</p>
                         </div>
                     </div>
                     
                     <div class="card-body">
                         <div class="results-grid">
                             <div class="result-item">
-                                <div class="result-icon skin-type">
-                                    <i class="fas fa-user-circle"></i>
+                                <div class="result-icon-wrapper skin-type">
+                                    <i class="fas fa-droplet"></i>
                                 </div>
                                 <div class="result-info">
                                     <h3>Skin Type</h3>
@@ -80,11 +86,11 @@
                                 </div>
                             </div>
                             <div class="result-item">
-                                <div class="result-icon acne-level">
+                                <div class="result-icon-wrapper acne-level">
                                     <i class="fas fa-microscope"></i>
                                 </div>
                                 <div class="result-info">
-                                    <h3>Acne Level</h3>
+                                    <h3>Skin Condition</h3>
                                     <p class="result-value">{{ acne_pred|title }}</p>
                                     {% if acne_confidence %}
                                     <p class="confidence-text">{{ acne_confidence|floatformat:1 }}% confidence</p>
@@ -94,32 +100,33 @@
                         </div>
                         
                         <div class="recommendation-box">
-                            <div class="recommendation-header">
-                                <i class="fas fa-lightbulb"></i>
-                                <h3>Your Personalized Recommendation</h3>
+                            <div class="recommendation-icon">
+                                <i class="fas fa-wand-magic-sparkles"></i>
                             </div>
+                            <h3>Your Personalized Recommendations</h3>
                             <p class="recommendation-text">{{ recommendation }}</p>
                         </div>
                         
                         <div class="action-buttons">
                             <button class="btn btn-secondary" onclick="location.reload()">
-                                <i class="fas fa-redo"></i>
-                                Try Another Photo
+                                <i class="fas fa-rotate-right"></i>
+                                Analyze Another Photo
                             </button>
                         </div>
                     </div>
                 </div>
                 {% endif %}
 
-
                 <div class="results-card" id="ajaxResults" style="display:none;">
                     <div class="card-header">
-                        <div class="header-icon">
-                            <i class="fas fa-check-circle"></i>
+                        <div class="header-icon-wrapper">
+                            <div class="header-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
                         </div>
                         <div class="header-text">
-                            <h2>Analysis Complete</h2>
-                            <p>Your personalized beauty profile is ready</p>
+                            <h2>Your Beauty Profile</h2>
+                            <p>Personalized analysis complete</p>
                         </div>
                     </div>
                     
@@ -133,16 +140,16 @@
                                     </div>
                                 </div>
                                 <div class="face-info">
-                                    <h3>Face Detected Successfully</h3>
-                                    <p>AI has identified and analyzed your facial features</p>
+                                    <h3>Face Successfully Detected</h3>
+                                    <p>Our AI has analyzed your unique features</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="results-grid"> 
+                        <div class="results-grid">
                             <div class="result-item">
-                                <div class="result-icon skin-type">
-                                    <i class="fas fa-user-circle"></i>
+                                <div class="result-icon-wrapper skin-type">
+                                    <i class="fas fa-droplet"></i>
                                 </div>
                                 <div class="result-info">
                                     <h3>Skin Type</h3>
@@ -151,7 +158,7 @@
                             </div>
 
                             <div class="result-item">
-                                <div class="result-icon eye-color">
+                                <div class="result-icon-wrapper eye-color">
                                     <i class="fas fa-eye"></i>
                                 </div>
                                 <div class="result-info">
@@ -164,11 +171,11 @@
                             </div>
 
                             <div class="result-item">
-                                <div class="result-icon acne-level">
+                                <div class="result-icon-wrapper acne-level">
                                     <i class="fas fa-microscope"></i>
                                 </div>
                                 <div class="result-info">
-                                    <h3>Acne Level</h3>
+                                    <h3>Skin Condition</h3>
                                     <p class="result-value" id="acneLevel"></p>
                                     <p class="confidence-text" id="acneConfidence"></p>
                                 </div>
@@ -179,25 +186,24 @@
                             <div class="analysis-card" id="typeProbsSection" style="display:none;">
                                 <div class="analysis-header">
                                     <div class="analysis-icon">
-                                        <i class="fas fa-chart-bar"></i>
+                                        <i class="fas fa-chart-simple"></i>
                                     </div>
                                     <div class="analysis-title">
-                                        <h3>Skin Type Analysis</h3>
-                                        <p>Detailed probability breakdown</p>
+                                        <h3>Skin Type Distribution</h3>
+                                        <p>Detailed probability analysis</p>
                                     </div>
                                 </div>
                                 <div class="prob-bars" id="typeProbsBars"></div>
                             </div>
 
- 
                             <div class="analysis-card" id="acneAnalysisSection" style="display:none;">
                                 <div class="analysis-header">
-                                    <div class="analysis-icon acne">
+                                    <div class="analysis-icon">
                                         <i class="fas fa-microscope"></i>
                                     </div>
                                     <div class="analysis-title">
-                                        <h3>Acne Analysis</h3>
-                                        <p>AI confidence level for acne detection</p>
+                                        <h3>Condition Analysis</h3>
+                                        <p>AI confidence assessment</p>
                                     </div>
                                 </div>
                                 <div class="confidence-display">
@@ -207,15 +213,15 @@
                                     <div class="confidence-label" id="acneConfidenceText"></div>
                                 </div>
                             </div>
- 
+
                             <div class="analysis-card" id="segmentationSection" style="display:none;">
                                 <div class="analysis-header">
-                                    <div class="analysis-icon segmentation">
+                                    <div class="analysis-icon">
                                         <i class="fas fa-layer-group"></i>
                                     </div>
                                     <div class="analysis-title">
-                                        <h3>Skin Condition Mapping</h3>
-                                        <p>Advanced AI segmentation analysis</p>
+                                        <h3>Skin Mapping</h3>
+                                        <p>Advanced segmentation analysis</p>
                                     </div>
                                 </div>
                                 <div class="segmentation-container">
@@ -226,15 +232,15 @@
                                     </div>
                                 </div>
                             </div>
- 
+
                             <div class="analysis-card" id="yoloDetectionSection" style="display:none;">
                                 <div class="analysis-header">
-                                    <div class="analysis-icon detection">
-                                        <i class="fas fa-crosshairs"></i>
+                                    <div class="analysis-icon">
+                                        <i class="fas fa-bullseye"></i>
                                     </div>
                                     <div class="analysis-title">
-                                        <h3>Detected Skin Defects</h3>
-                                        <p>AI-identified areas of concern</p>
+                                        <h3>Feature Detection</h3>
+                                        <p>Identified areas of interest</p>
                                     </div>
                                 </div>
                                 <div class="detection-container">
@@ -243,34 +249,32 @@
                             </div>
                         </div>
 
-
                         <div class="recommendation-box">
-                            <div class="recommendation-header">
-                                <i class="fas fa-lightbulb"></i>
-                                <h3>Your Personalized Recommendation</h3>
+                            <div class="recommendation-icon">
+                                <i class="fas fa-wand-magic-sparkles"></i>
                             </div>
-                            <p class="recommendation-text" id="recommendationText">Based on your skin type and eye color, we'll provide personalized makeup recommendations.</p>
+                            <h3>Your Personalized Recommendations</h3>
+                            <p class="recommendation-text" id="recommendationText">Based on your unique features, we'll provide tailored beauty guidance.</p>
                         </div>
-
 
                         <div class="feedback-section" id="feedbackSection">
                             <div class="feedback-header">
-                                <i class="fas fa-comment-dots"></i>
-                                <h3>Was this analysis helpful?</h3>
+                                <i class="fas fa-heart"></i>
+                                <h3>How was your experience?</h3>
                             </div>
                             <div class="feedback-buttons">
-                                <button class="btn btn-success" id="likeBtn">
+                                <button class="btn btn-feedback-positive" id="likeBtn">
                                     <i class="fas fa-thumbs-up"></i>
-                                    Yes, helpful!
+                                    Helpful
                                 </button>
-                                <button class="btn btn-error" id="dislikeBtn">
+                                <button class="btn btn-feedback-negative" id="dislikeBtn">
                                     <i class="fas fa-thumbs-down"></i>
-                                    Not really
+                                    Not Helpful
                                 </button>
                             </div>
                             <div class="dislike-area" id="dislikeFeedbackArea" style="display:none;">
-                                <p>Tell us why:</p>
-                                <textarea id="dislikeReason" rows="3" placeholder="e.g., 'Recommendations were not accurate'"></textarea>
+                                <p>Help us improve - what went wrong?</p>
+                                <textarea id="dislikeReason" rows="3" placeholder="Share your thoughts..."></textarea>
                                 <button class="btn btn-primary" id="submitDislikeFeedbackBtn">
                                     <i class="fas fa-paper-plane"></i>
                                     Submit Feedback
@@ -281,13 +285,12 @@
 
                         <div class="action-buttons">
                             <button class="btn btn-secondary" onclick="resetForm()">
-                                <i class="fas fa-redo"></i>
-                                Try Another Photo
+                                <i class="fas fa-rotate-right"></i>
+                                Analyze Another Photo
                             </button>
                         </div>
                     </div>
                 </div>
-
 
                 <div class="loading-card" id="loadingSection" style="display:none;">
                     <div class="loading-content">
@@ -297,21 +300,22 @@
                             <div class="spinner-ring"></div>
                         </div>
                         <div class="loading-text">
-                            <h3>Analyzing Your Photo...</h3>
-                            <p>Our AI is examining your skin and preparing personalized recommendations</p>
+                            <h3>Analyzing Your Beauty Profile</h3>
+                            <p>Our AI is carefully examining your features to provide personalized recommendations</p>
                         </div>
                     </div>
                 </div>
 
- 
                 <div class="upload-card">
                     <div class="card-header">
-                        <div class="header-icon">
-                            <i class="fas fa-upload"></i>
+                        <div class="header-icon-wrapper">
+                            <div class="header-icon">
+                                <i class="fas fa-cloud-arrow-up"></i>
+                            </div>
                         </div>
                         <div class="header-text">
                             <h2>Upload Your Photo</h2>
-                            <p>Choose a clear photo of your face for the best recommendations</p>
+                            <p>Choose a well-lit photo for accurate analysis</p>
                         </div>
                     </div>
                     
@@ -322,35 +326,37 @@
                                 <input type="file" accept="image/*" id="fileInput" name="photo" required class="hidden-input">
                                 <label for="fileInput" class="upload-label">
                                     <div class="upload-icon">
-                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <i class="fas fa-image"></i>
                                     </div>
                                     <div class="upload-text">
                                         <span class="upload-title">Drop your photo here</span>
-                                        <span class="upload-subtitle">or click to browse</span>
+                                        <span class="upload-subtitle">or click to browse your files</span>
                                     </div>
                                 </label>
                             </div>
                             <div class="photo-preview" id="photoPreview"></div>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-sparkles"></i>
-                                Get Makeup Recommendations
+                                <i class="fas fa-wand-magic-sparkles"></i>
+                                Analyze My Beauty Profile
                             </button>
                         </form>
                     </div>
                 </div>
 
                 <div class="divider">
-                    <span>OR</span>
+                    <span>or use your camera</span>
                 </div>
 
                 <div class="camera-card">
                     <div class="card-header">
-                        <div class="header-icon">
-                            <i class="fas fa-camera"></i>
+                        <div class="header-icon-wrapper">
+                            <div class="header-icon">
+                                <i class="fas fa-camera"></i>
+                            </div>
                         </div>
                         <div class="header-text">
                             <h2>Take a Live Photo</h2>
-                            <p>Use your camera to capture a photo instantly</p>
+                            <p>Capture your photo instantly with your camera</p>
                         </div>
                     </div>
 
@@ -368,7 +374,7 @@
 
                         <div class="capture-controls">
                             <button id="captureBtn" class="btn btn-accent" disabled>
-                                <i class="fas fa-camera-retro"></i>
+                                <i class="fas fa-camera"></i>
                                 Capture Photo
                             </button>
                         </div>
@@ -388,11 +394,11 @@
             <div class="footer-content">
                 <div class="footer-brand">
                     <div class="brand-icon">
-                        <i class="fas fa-sparkles"></i>
+                        <i class="fas fa-gem"></i>
                     </div>
                     <span class="brand-text">Beautyxia</span>
                 </div>
-                <p>&copy; 2025 houssaini slimen. All rights reserved.</p>
+                <p>&copy; 2025 Beautyxia by Houssaini Slimen. All rights reserved.</p>
             </div>
         </footer>
     </div>

@@ -22,6 +22,9 @@ const feedbackMessage = document.getElementById("feedbackMessage")
 let stream
 let beautyTips // Declare the beautyTips variable
 
+// Import or declare generateTips function here
+// Placeholder for the real generateTips function from tips.js
+
 // File input preview
 fileInput.addEventListener("change", (e) => {
   const file = e.target.files[0]
@@ -159,15 +162,15 @@ function showResults(data) {
           const label = box.label
           const confidence = box.confidence
 
-          ctx.strokeStyle = "#16a34a"
+          ctx.strokeStyle = "#A8D5BA"
           ctx.lineWidth = 3
           ctx.strokeRect(x1, y1, x2 - x1, y2 - y1)
 
-          ctx.fillStyle = "rgba(22, 163, 74, 0.8)"
+          ctx.fillStyle = "rgba(168, 213, 186, 0.9)"
           ctx.fillRect(x1, y1 - 25, (label.length + 10) * 8, 25)
 
           ctx.fillStyle = "#ffffff"
-          ctx.font = "bold 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto"
+          ctx.font = "bold 14px 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto"
           ctx.fillText(`${label} ${(confidence * 100).toFixed(1)}%`, x1 + 5, y1 - 8)
         })
       }
@@ -180,7 +183,7 @@ function showResults(data) {
   }
 
   const skinTypeLabels = ["Dry", "Normal", "Oily"]
-  const typeColors = ["#2563eb", "#7c3aed", "#f59e0b"]
+  const typeColors = ["#A8D5BA", "#9BA8D5", "#D5B8A8"]
 
   if (data.type_probs && data.type_probs.length === skinTypeLabels.length) {
     document.getElementById("typeProbsSection").style.display = "block"
@@ -218,44 +221,22 @@ function showResults(data) {
 }
 
 function generateRecommendation(data) {
-  // Check if beautyTips is available from tips.js
-  if (typeof beautyTips === "undefined") {
-    console.error("beautyTips not loaded from tips.js")
+  if (typeof window.generateTips === "undefined") {
+    console.error("generateTips function not loaded from tips.js")
     document.getElementById("recommendationText").textContent =
       "Unable to load recommendations. Please refresh the page."
     return
   }
 
   const language = "en" // Default to English, can be made dynamic
-  const tips = []
 
-  // Get skin type tips
-  if (data.skin_type) {
-    const skinType = data.skin_type.toLowerCase()
-    if (beautyTips[language].skinType[skinType]) {
-      tips.push(...beautyTips[language].skinType[skinType])
-    }
-  }
-
-  // Get eye color tips
-  if (data.left_eye_color) {
-    const eyeColor = data.left_eye_color.toLowerCase().replace(" ", "")
-    if (beautyTips[language].eyeColor[eyeColor]) {
-      tips.push(...beautyTips[language].eyeColor[eyeColor])
-    }
-  }
-
-  // Get acne level tips
-  if (data.acne_pred) {
-    const acneLevel = data.acne_pred.toLowerCase()
-    if (beautyTips[language].acneLevel[acneLevel]) {
-      tips.push(...beautyTips[language].acneLevel[acneLevel])
-    }
-  }
+  // Generate tips using the function from tips.js
+  const tips = window.generateTips(data, language)
 
   // If we have tips, display them
   if (tips.length > 0) {
-    const recommendation = tips.join(" ")
+    // Join tips with bullet points for better readability
+    const recommendation = tips.map((tip) => `• ${tip}`).join("\n")
     document.getElementById("recommendationText").textContent = recommendation
   } else {
     // Fallback recommendation
@@ -359,7 +340,7 @@ captureBtn.addEventListener("click", async () => {
   }
 
   stopCamera()
-  captureBtn.innerHTML = '<i class="fas fa-camera-retro"></i> Capture Photo'
+  captureBtn.innerHTML = '<i class="fas fa-camera"></i> Capture Photo'
   captureBtn.disabled = false
 })
 
@@ -390,14 +371,14 @@ async function sendFeedback(feedbackType, reason = "") {
 
     if (response.ok) {
       feedbackMessage.textContent = data.message || "Thank you for your feedback!"
-      feedbackMessage.style.color = "#15803d"
-      feedbackMessage.style.backgroundColor = "#f0fdf4"
-      feedbackMessage.style.border = "1px solid #bbf7d0"
+      feedbackMessage.style.color = "#7FB89A"
+      feedbackMessage.style.backgroundColor = "rgba(168, 213, 186, 0.15)"
+      feedbackMessage.style.border = "1px solid rgba(168, 213, 186, 0.3)"
     } else {
       feedbackMessage.textContent = data.error || "Failed to submit feedback."
-      feedbackMessage.style.color = "#b91c1c"
-      feedbackMessage.style.backgroundColor = "#fef2f2"
-      feedbackMessage.style.border = "1px solid #fecaca"
+      feedbackMessage.style.color = "#C97A7A"
+      feedbackMessage.style.backgroundColor = "rgba(201, 122, 122, 0.15)"
+      feedbackMessage.style.border = "1px solid rgba(201, 122, 122, 0.3)"
       // Re-enable buttons if submission failed
       likeBtn.disabled = false
       dislikeBtn.disabled = false
@@ -407,9 +388,9 @@ async function sendFeedback(feedbackType, reason = "") {
     }
   } catch (error) {
     feedbackMessage.textContent = "Network error: Could not submit feedback."
-    feedbackMessage.style.color = "#b91c1c"
-    feedbackMessage.style.backgroundColor = "#fef2f2"
-    feedbackMessage.style.border = "1px solid #fecaca"
+    feedbackMessage.style.color = "#C97A7A"
+    feedbackMessage.style.backgroundColor = "rgba(201, 122, 122, 0.15)"
+    feedbackMessage.style.border = "1px solid rgba(201, 122, 122, 0.3)"
     // Re-enable buttons on network error
     likeBtn.disabled = false
     dislikeBtn.disabled = false
@@ -418,8 +399,8 @@ async function sendFeedback(feedbackType, reason = "") {
     }
   } finally {
     feedbackMessage.style.display = "block"
-    feedbackMessage.style.padding = "12px"
-    feedbackMessage.style.borderRadius = "6px"
+    feedbackMessage.style.padding = "16px"
+    feedbackMessage.style.borderRadius = "12px"
     feedbackMessage.style.fontWeight = "500"
     dislikeFeedbackArea.style.display = "none" // Hide dislike area after submission attempt
     dislikeReason.value = "" // Clear reason
@@ -444,6 +425,6 @@ submitDislikeFeedbackBtn.addEventListener("click", () => {
   if (reason) {
     sendFeedback("dislike", reason)
   } else {
-    alert("Please provide a reason for disliking the analysis.")
+    alert("Please provide a reason for your feedback.")
   }
 })
