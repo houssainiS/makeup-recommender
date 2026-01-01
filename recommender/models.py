@@ -63,7 +63,7 @@ class Shop(models.Model):
     online_token = models.TextField(blank=True, null=True)   # Short-lived token
     installed_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)  # Track active/inactive status
-    theme_editor_link = models.URLField(blank=True, null=True)  # Store Theme Editor deep link
+    theme_editor_link = models.URLField(max_length=500, blank=True, null=True) # Store Theme Editor deep link
     metafield_definition_id = models.CharField(max_length=255, blank=True, null=True)  # 👈 Store definition ID
 
     def __str__(self):
@@ -72,7 +72,7 @@ class Shop(models.Model):
 
 
 class PageContent(models.Model):
-    title = models.CharField(max_length=200, default="Face Analyzer")
+    title = models.CharField(max_length=500, default="Face Analyzer")
     body = models.TextField()
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -97,3 +97,18 @@ class Purchase(models.Model):
     def expiry_date(self):
         return self.purchase_date + timezone.timedelta(days=self.usage_duration_days)
 
+#========================
+#this code will reset the allowed origins cache everytime new shop is added
+
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.core.cache import cache
+
+@receiver([post_save, post_delete], sender=AllowedOrigin)
+@receiver([post_save, post_delete], sender=Shop)
+def clear_cors_cache(sender, instance, **kwargs):
+    """
+    Clears the cached allowed origins immediately whenever 
+    a Shop or AllowedOrigin is added, updated, or deleted.
+    """
+    cache.delete("allowed_origins")
