@@ -1,9 +1,9 @@
 from .models import Visitor, AllowedOrigin, Shop
+from wordPress.models import WordpressShop # <--- Import WordpressShop
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.timezone import now
 from django.conf import settings
 from django.core.cache import cache
-
 
 class VisitorTrackingMiddleware(MiddlewareMixin):
     def process_request(self, request):
@@ -15,14 +15,24 @@ class VisitorTrackingMiddleware(MiddlewareMixin):
         cors_urls = cache.get("allowed_origins")
         if cors_urls is None:
             try:
-                # Fetch both manually added origins + active shop domains
+                # 1. Manual Origins (e.g., localhost, your own frontend)
                 allowed_from_model = list(AllowedOrigin.objects.values_list("url", flat=True))
+                
+                # 2. Shopify Shops (Stored as 'domain.myshopify.com', so we add https://)
                 allowed_from_shops = [
                     f"https://{domain}"
                     for domain in Shop.objects.filter(is_active=True).values_list("domain", flat=True)
                 ]
 
-                cors_urls = list(set(allowed_from_model + allowed_from_shops))  # merge + deduplicate
+                # 3. WordPress Shops (Stored as full URL 'https://site.com', just strip trailing slash)
+                allowed_from_wp = [
+                    url.rstrip('/') 
+                    for url in WordpressShop.objects.filter(is_active=True).values_list("domain", flat=True)
+                ]
+
+                # Merge all lists + deduplicate
+                cors_urls = list(set(allowed_from_model + allowed_from_shops + allowed_from_wp))
+                
                 cache.set("allowed_origins", cors_urls, 300)  # cache 5 min
             except Exception:
                 cors_urls = []
@@ -50,10 +60,13 @@ class VisitorTrackingMiddleware(MiddlewareMixin):
         """
         Add headers to allow Shopify embedded app in iframe.
         """
-        # Only add headers for shopify iframe paths (optional: all except webhook)
         if not request.path.startswith("/webhooks/"):
             # Allow embedding in Shopify admin
             response["X-Frame-Options"] = "ALLOWALL"
+            
+            # Note: If you ever want to embed this in WordPress Admin (iframe), 
+            # you will need to add the WP domains here too. 
+            # For now, this is safe as long as WP uses the redirect method.
             response["Content-Security-Policy"] = (
                 "frame-ancestors https://*.myshopify.com https://admin.shopify.com;"
             )
