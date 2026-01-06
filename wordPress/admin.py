@@ -1,33 +1,45 @@
 from django.contrib import admin
-from .models import WordpressShop
+from .models import WordpressShop, Plan
+
+@admin.register(Plan)
+class PlanAdmin(admin.ModelAdmin):
+    list_display = ('name', 'monthly_limit')
+    search_fields = ('name',)
 
 @admin.register(WordpressShop)
 class WordpressShopAdmin(admin.ModelAdmin):
-    # Columns to show in the list view
-    list_display = ('domain', 'plan_type', 'is_active', 'analysis_this_month', 'analysis_all_time', 'created_at')
+    # 1. Columns for the list view
+    # Note: 'plan' replaces 'plan_type', and 'current_limit' is a helper method below
+    list_display = ('domain', 'plan', 'is_active', 'analysis_this_month', 'current_limit', 'created_at')
     
-    # Add filters on the right side
-    list_filter = ('plan_type', 'is_active', 'created_at')
+    # 2. Filters on the right sidebar
+    list_filter = ('plan', 'is_active', 'created_at')
     
-    # Search by domain or email
+    # 3. Search functionality
     search_fields = ('domain', 'admin_email', 'api_key')
     
-    # Organize fields in the detail view
+    # 4. Detailed View Organization (Fieldsets)
     fieldsets = (
-        ('Site Info', {
+        ('Site Identity', {
             'fields': ('domain', 'admin_email', 'api_key')
         }),
-        ('Subscription', {
-            'fields': ('plan_type', 'is_active', 'monthly_limit')
+        ('Subscription Plan', {
+            'fields': ('plan', 'is_active')
         }),
-        ('Usage Stats', {
+        ('Usage Statistics', {
+            'description': "Track how many scans this shop has performed.",
             'fields': ('analysis_this_month', 'analysis_all_time')
         }),
-        ('Technical Details', {
-            'classes': ('collapse',), # Hide by default
-            'fields': ('wp_version', 'plugin_version'),
+        ('Technical & Metadata', {
+            'classes': ('collapse',), # Collapsible section
+            'fields': ('wp_version', 'plugin_version', 'last_heartbeat', 'created_at'),
         }),
     )
     
-    # Make the API key read-only if you don't want to accidentally change it
-    readonly_fields = ('created_at', 'last_heartbeat')
+    # 5. Read-only fields to prevent accidental manual edits
+    readonly_fields = ('api_key', 'analysis_all_time', 'last_heartbeat', 'created_at')
+
+    # Helper method to show the numeric limit in the list view
+    @admin.display(description='Scan Limit')
+    def current_limit(self, obj):
+        return obj.current_limit
