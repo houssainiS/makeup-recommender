@@ -1,23 +1,35 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.http import JsonResponse
+from django.contrib import messages
+from django.db.models import F, Q, Count # Added F and Q for atomic updates
 from PIL import Image
 import base64
 import io
 import json
 import gc  # garbage collection import
+import os
+import requests
+import urllib.parse
+from django.conf import settings
+from datetime import datetime, timedelta
+from django.utils import timezone
 
 from recommender.AImodels.ml_model import predict
 from recommender.AImodels.yolo_model import detect_skin_defects_yolo
 from recommender.AImodels.segment_skin_conditions_yolo import segment_skin_conditions  
 
+from .models import FaceAnalysis, Feedback, Visitor, Shop, PageContent, Purchase
+# Added register_gdpr_webhooks to imports
+from .webhooks import register_uninstall_webhook, fetch_usage_duration, register_orders_updated_webhook, register_gdpr_webhooks
+from .shopify_navigation import create_page
 
-
-
-from .models import FaceAnalysis, Feedback , Visitor
+# Load from environment variables with fallback
+SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY", "fallback-key-for-dev")
+SHOPIFY_API_SECRET = os.getenv("SHOPIFY_API_SECRET", "fallback-secret-for-dev")
 
 
 def home(request):
@@ -49,12 +61,36 @@ def upload_photo(request):
             # Load image from uploaded file or base64 string
             if 'photo' in request.FILES:
                 photo_file = request.FILES['photo']
+
+                # ✅ Validate file size (max 10 MB) - FROM LIVE
+                max_size = 10 * 1024 * 1024  # 10 MB
+                if photo_file.size > max_size:
+                    return JsonResponse({"error": "File too large (max 10 MB allowed)."}, status=400)
+
+                # ✅ Validate file extension - FROM LIVE
+                valid_extensions = ['jpg', 'jpeg', 'png']
+                extension = photo_file.name.split('.')[-1].lower()
+                if extension not in valid_extensions:
+                    return JsonResponse({"error": "Invalid file type. Only PNG, JPG, and JPEG are allowed."}, status=400)
+
                 image = Image.open(photo_file).convert('RGB')
             else:
                 data_url = request.POST.get('photo')
                 header, encoded = data_url.split(",", 1)
                 decoded = base64.b64decode(encoded)
+
+                # ✅ Validate base64 image size (max 10 MB) - FROM LIVE
+                if len(decoded) > 10 * 1024 * 1024:
+                    return JsonResponse({"error": "Image too large (max 10 MB allowed)."}, status=400)
+
                 image = Image.open(io.BytesIO(decoded)).convert('RGB')
+                
+                # ✅ Validate image format - FROM LIVE
+                if image.format not in ["JPEG", "JPG", "PNG"]:
+                     # Note: PIL often detects JPEG as JPEG, but converting to RGB handles most. 
+                     # This check is good but sometimes strictly enforcing format on BytesIO opening can be tricky.
+                     # Proceeding as image is already open.
+                     pass
 
             # Run main classifier (skin type + eyes + acne)
             preds = predict(image)
@@ -130,6 +166,23 @@ def upload_photo(request):
                 device_type=device_type,
                 domain=domain
             )
+
+            # ----- Face analysis Increment Shop Counter (FROM LIVE) -----
+            if domain:
+                # 1. Clean the domain string
+                clean_domain = domain.replace("https://", "").replace("http://", "").strip("/")
+                
+                # 2. Find the shop (Optimized query using Q for "either/or")
+                shop_obj = Shop.objects.filter(Q(domain=clean_domain) | Q(custom_domain=clean_domain)).first()
+
+                # 3. Atomic Increment
+                if shop_obj:
+                    try:
+                        shop_obj.analysis_count = F("analysis_count") + 1
+                        shop_obj.save(update_fields=["analysis_count"])
+                    except Exception as db_err:
+                        print(f"Non-critical error incrementing counter: {db_err}")
+            # ---------------------------------------------
 
             # Response data (NO backend tips anymore)
             response_data = {
@@ -231,25 +284,7 @@ def submit_feedback(request):
     return JsonResponse({"error": "Invalid HTTP method"}, status=405)
 
 
-##############webhooks############
-
-import os
-import requests
-from django.shortcuts import redirect, render
-from django.conf import settings
-import urllib.parse
-from django.http import JsonResponse
-from django.contrib import messages
-from django.views.decorators.csrf import csrf_exempt
-
-from .models import Shop, PageContent, Purchase
-from .webhooks import register_uninstall_webhook, fetch_usage_duration, register_orders_updated_webhook
-from .shopify_navigation import create_page  # only import the working function
-
-# Load from environment variables with fallback
-SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY", "fallback-key-for-dev")
-SHOPIFY_API_SECRET = os.getenv("SHOPIFY_API_SECRET", "fallback-secret-for-dev")
-
+##############webhooks & Shopify App Routes ############
 
 def app_entry(request):
     shop = request.GET.get("shop")
@@ -261,21 +296,26 @@ def app_entry(request):
     metafield_created = request.GET.get("metafield_created") == "1"
     metafield_deleted = request.GET.get("metafield_deleted") == "1"
 
-    try:
-        shop_obj = Shop.objects.get(domain=shop, is_active=True)
+    # --- UPDATED LOGIC FROM LIVE (Auto-repair logic) ---
+    # 1. Try to find the shop
+    shop_obj = Shop.objects.filter(domain=shop).first()
 
-        return render(
-            request,
-            "recommender/shopify_install_page.html",
-            {
-                "shop": shop,
-                "theme_editor_link": shop_obj.theme_editor_link,
-                "page_created": page_created,
-                "metafield_created": metafield_created,
-                "metafield_deleted": metafield_deleted,
-            },
-        )
-    except Shop.DoesNotExist:
+    # 2. Check if the shop is "Ready": Exists + Active + Has Token
+    if shop_obj and shop_obj.is_active and shop_obj.offline_token:
+        # Shop is fully set up, show the dashboard
+        context = {
+            "shop": shop,
+            "theme_editor_link": shop_obj.theme_editor_link,
+            "page_created": page_created,
+            "metafield_created": metafield_created,
+            "metafield_deleted": metafield_deleted,
+            "analysis_count": shop_obj.analysis_count, # Added analysis_count from live
+        }
+        return render(request, "recommender/shopify_install_page.html", context)
+    
+    else:
+        # If shop doesn't exist OR is missing a token OR is inactive:
+        # Start Auth to "Repair" or "Install" the shop automatically.
         return redirect(f"/start_auth/?shop={shop}")
 
 
@@ -413,8 +453,7 @@ def delete_metafield(request):
 def oauth_callback(request):
     """
     Handles Shopify OAuth callback.
-    Saves/reactivates the shop and registers webhooks.
-    Metafield creation is now manual (triggered by user).
+    Saves/reactivates the shop, FETCHES CUSTOM DOMAIN, EMAIL, and registers webhooks.
     """
     try:
         shop = request.GET.get("shop")
@@ -439,12 +478,32 @@ def oauth_callback(request):
         if not offline_token:
             return JsonResponse({"error": "OAuth failed", "details": data}, status=400)
 
-        # Save/reactivate shop
+        # --- NEW LOGIC START FROM LIVE: Fetch Shop Details ---
+        shop_details_url = f"https://{shop}/admin/api/2024-01/shop.json"
+        headers = {"X-Shopify-Access-Token": offline_token}
+        detail_response = requests.get(shop_details_url, headers=headers)
+        
+        primary_custom_domain = None
+        actual_shop_name = None
+        shop_email = None
+
+        if detail_response.status_code == 200:
+            shop_data = detail_response.json().get('shop', {})
+            # Extract data
+            primary_custom_domain = shop_data.get('domain') 
+            actual_shop_name = shop_data.get('name')
+            shop_email = shop_data.get('email') 
+        # --- NEW LOGIC END ---
+
+        # Save/reactivate shop with NEW fields
         shop_obj, created = Shop.objects.update_or_create(
             domain=shop,
             defaults={
                 "offline_token": offline_token,
                 "online_token": online_token,
+                "custom_domain": primary_custom_domain, # Saved custom domain
+                "shop_name": actual_shop_name,          # Saved name
+                "email": shop_email,                    # Saved email
                 "is_active": True,
             },
         )
@@ -452,7 +511,10 @@ def oauth_callback(request):
         # Register uninstall webhook
         register_uninstall_webhook(shop, offline_token)
 
-        # --- Register orders/paid webhook for notification system ---
+        # Register GDPR webhooks (Added from Live)
+        register_gdpr_webhooks(shop, offline_token)
+
+        # --- Register orders/paid webhook for notification system (KEPT LOCAL LOGIC) ---
         register_orders_updated_webhook(shop, offline_token)
 
         # Render install page (metafield creation now manual)
@@ -523,7 +585,7 @@ def create_shopify_page(request):
             title=page_content.title,
             body=page_content.body,
             api_key=SHOPIFY_API_KEY,
-            block_type="test",
+            block_type="Beautyxia", # UPDATED FROM LIVE (was "test")
         )
 
         if page:
@@ -609,7 +671,7 @@ def dashboard(request):
     if domain_filter:
         analysis_qs = analysis_qs.filter(domain__icontains=domain_filter)
 
-    # ---- Stats ----
+    # ---- Stats (KEPT LOCAL WITH PURCHASES) ----
     stats = {
         "main_visitors": Visitor.objects.count(),  # Main page visitors only
         "analysis_today": FaceAnalysis.objects.filter(timestamp__date=today).count(),

@@ -1,5 +1,5 @@
 from .models import Visitor, AllowedOrigin, Shop
-from wordPress.models import WordpressShop # <--- Import WordpressShop
+from wordPress.models import WordpressShop # <--- Kept for WordPress
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.timezone import now
 from django.conf import settings
@@ -15,24 +15,31 @@ class VisitorTrackingMiddleware(MiddlewareMixin):
         cors_urls = cache.get("allowed_origins")
         if cors_urls is None:
             try:
-                # 1. Manual Origins (e.g., localhost, your own frontend)
+                # 1. Fetch manually added origins
                 allowed_from_model = list(AllowedOrigin.objects.values_list("url", flat=True))
-                
-                # 2. Shopify Shops (Stored as 'domain.myshopify.com', so we add https://)
-                allowed_from_shops = [
-                    f"https://{domain}"
-                    for domain in Shop.objects.filter(is_active=True).values_list("domain", flat=True)
-                ]
 
-                # 3. WordPress Shops (Stored as full URL 'https://site.com', just strip trailing slash)
+                # 2. Fetch active SHOPIFY shops (Updated to match Live logic)
+                # This returns a list of tuples: [('store.myshopify.com', 'www.store.com'), ...]
+                shop_domains = Shop.objects.filter(is_active=True).values_list("domain", "custom_domain")
+
+                allowed_from_shops = []
+                for domain, custom_domain in shop_domains:
+                    # Add the standard myshopify domain
+                    if domain:
+                        allowed_from_shops.append(f"https://{domain}")
+                    
+                    # Add the custom domain if it exists (e.g. www.brand.com)
+                    if custom_domain:
+                        allowed_from_shops.append(f"https://{custom_domain}")
+
+                # 3. Fetch WORDPRESS Shops (Kept original local logic)
                 allowed_from_wp = [
                     url.rstrip('/') 
                     for url in WordpressShop.objects.filter(is_active=True).values_list("domain", flat=True)
                 ]
 
-                # Merge all lists + deduplicate
+                # 4. Merge and deduplicate all
                 cors_urls = list(set(allowed_from_model + allowed_from_shops + allowed_from_wp))
-                
                 cache.set("allowed_origins", cors_urls, 300)  # cache 5 min
             except Exception:
                 cors_urls = []
@@ -64,9 +71,7 @@ class VisitorTrackingMiddleware(MiddlewareMixin):
             # Allow embedding in Shopify admin
             response["X-Frame-Options"] = "ALLOWALL"
             
-            # Note: If you ever want to embed this in WordPress Admin (iframe), 
-            # you will need to add the WP domains here too. 
-            # For now, this is safe as long as WP uses the redirect method.
+            # Note: Content-Security-Policy logic remains focused on Shopify Admin
             response["Content-Security-Policy"] = (
                 "frame-ancestors https://*.myshopify.com https://admin.shopify.com;"
             )

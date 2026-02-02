@@ -4,15 +4,23 @@ import hmac
 import hashlib
 import base64
 import json
+import os
+import traceback
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from django.conf import settings
 from .models import Shop, Purchase
-import os
 
+# ======================================================
+# LOAD SHOPIFY API SECRET
+# ======================================================
 SHOPIFY_API_SECRET = os.getenv("SHOPIFY_API_SECRET", "fallback-secret-for-dev")
 
 
+# ======================================================
+# HMAC VERIFICATION FUNCTION
+# ======================================================
 def verify_webhook(data, hmac_header):
     """
     Verifies Shopify webhook HMAC to ensure request authenticity.
@@ -26,6 +34,9 @@ def verify_webhook(data, hmac_header):
     return hmac.compare_digest(calculated_hmac, hmac_header)
 
 
+# ======================================================
+# APP UNINSTALLED WEBHOOK
+# ======================================================
 @csrf_exempt
 def app_uninstalled(request):
     """
@@ -36,6 +47,7 @@ def app_uninstalled(request):
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
+    # --- Verify webhook authenticity ---
     hmac_header = request.headers.get("X-Shopify-Hmac-Sha256")
     if not hmac_header:
         print("[Webhook] Missing HMAC header")
@@ -45,6 +57,7 @@ def app_uninstalled(request):
         print("[Webhook] HMAC verification failed")
         return JsonResponse({"error": "Invalid webhook"}, status=401)
 
+    # --- Get shop domain ---
     shop_domain = request.headers.get("X-Shopify-Shop-Domain")
     if not shop_domain:
         return JsonResponse({"error": "Missing shop domain"}, status=400)
@@ -110,12 +123,11 @@ def app_uninstalled(request):
     return JsonResponse({"status": "ok"}, status=200)
 
 
+# ======================================================
+# REGISTER UNINSTALL WEBHOOK
+# ======================================================
 def register_uninstall_webhook(shop, access_token):
-    """
-    Registers the 'app/uninstalled' webhook for a specific shop.
-    Call this function when a merchant installs the app.
-    """
-    url = f"https://{shop}/admin/api/2023-10/webhooks.json"
+    url = f"https://{shop}/admin/api/2025-07/webhooks.json"
     headers = {
         "X-Shopify-Access-Token": access_token,
         "Content-Type": "application/json"
@@ -133,18 +145,85 @@ def register_uninstall_webhook(shop, access_token):
         print("[Webhook Registration] Response:", response.json())
     except Exception as e:
         print("[Webhook Registration] Failed to register webhook:", str(e))
-        print("[Webhook Registration] Raw response text:", getattr(response, "text", "No response text"))
+
+
+# ======================================================
+# GDPR MANDATORY WEBHOOKS (Required for App Approval)
+# ======================================================
+
+@csrf_exempt
+def customers_data_request(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    hmac_header = request.headers.get("X-Shopify-Hmac-Sha256")
+    if not verify_webhook(request.body, hmac_header):
+        print("[GDPR] Invalid HMAC for customers/data_request")
+        return JsonResponse({"error": "Invalid webhook"}, status=401)
+
+    data = json.loads(request.body.decode("utf-8"))
+    print("[GDPR] Customer data request received:", data)
+    return JsonResponse({"status": "ok"}, status=200)
+
+
+@csrf_exempt
+def customers_redact(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    hmac_header = request.headers.get("X-Shopify-Hmac-Sha256")
+    if not verify_webhook(request.body, hmac_header):
+        print("[GDPR] Invalid HMAC for customers/redact")
+        return JsonResponse({"error": "Invalid webhook"}, status=401)
+
+    data = json.loads(request.body.decode("utf-8"))
+    print("[GDPR] Customer redact request received:", data)
+    return JsonResponse({"status": "ok"}, status=200)
+
+
+@csrf_exempt
+def shop_redact(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    hmac_header = request.headers.get("X-Shopify-Hmac-Sha256")
+    if not verify_webhook(request.body, hmac_header):
+        print("[GDPR] Invalid HMAC for shop/redact")
+        return JsonResponse({"error": "Invalid webhook"}, status=401)
+
+    data = json.loads(request.body.decode("utf-8"))
+    shop_domain = data.get("shop_domain")
+    print(f"[GDPR] Shop redact request received for: {shop_domain}")
+    return JsonResponse({"status": "ok"}, status=200)
+
+
+def register_gdpr_webhooks(shop, access_token):
+    topics = {
+        "customers/data_request": "https://beautyai.duckdns.org/webhooks/customers_data_request/",
+        "customers/redact": "https://beautyai.duckdns.org/webhooks/customers_redact/",
+        "shop/redact": "https://beautyai.duckdns.org/webhooks/shop_redact/",
+    }
+
+    for topic, address in topics.items():
+        url = f"https://{shop}/admin/api/2025-07/webhooks.json"
+        headers = {
+            "X-Shopify-Access-Token": access_token,
+            "Content-Type": "application/json"
+        }
+        data = {
+            "webhook": {
+                "topic": topic,
+                "address": address,
+                "format": "json"
+            }
+        }
+        try:
+            response = requests.post(url, json=data, headers=headers)
+            print(f"[GDPR Webhook Registration] {topic}: {response.json()}")
+        except Exception as e:
+            print(f"[GDPR Webhook Registration] Failed for {topic}:", str(e))
 
 
 # ==========================================================
-# 📌 Orders/Updated Webhook Registration & Endpoint
+# 📌 LOCAL SPECIFIC: Orders/Updated Webhook & Logic
 # ==========================================================
-from django.conf import settings
-from django.utils import timezone
-
-# -------------------------------
-# Fetch usage duration metafield
-# -------------------------------
 
 def fetch_usage_duration(product_id, shop_domain):
     """
@@ -179,10 +258,6 @@ def fetch_usage_duration(product_id, shop_domain):
         return 0
 
 
-# -------------------------------
-# Register orders/updated webhook
-# -------------------------------
-
 def register_orders_updated_webhook(shop_domain, access_token):
     """
     Registers the 'orders/updated' webhook for a shop with detailed debugging.
@@ -194,7 +269,7 @@ def register_orders_updated_webhook(shop_domain, access_token):
     }
     data = {
         "webhook": {
-            "topic": "orders/updated",  # ✅ supported topic
+            "topic": "orders/updated",
             "address": f"{settings.BASE_URL}/webhooks/order_updated/",
             "format": "json"
         }
@@ -202,46 +277,27 @@ def register_orders_updated_webhook(shop_domain, access_token):
 
     try:
         response = requests.post(url, json=data, headers=headers)
-
-        # Print status code
         print("[Webhook Registration] HTTP Status Code:", response.status_code)
-
-        # Try parsing JSON safely
         try:
             resp_json = response.json()
             print("[Webhook Registration] Response JSON:", resp_json)
-            if "errors" in resp_json:
-                print("[Webhook Registration] Shopify returned errors:", resp_json["errors"])
-            elif "webhook" in resp_json:
-                print("[Webhook Registration] Webhook successfully registered:", resp_json["webhook"])
-            else:
-                print("[Webhook Registration] Unexpected response format")
-        except ValueError as json_err:
-            print("[Webhook Registration] Failed to parse JSON:", json_err)
+        except ValueError:
             print("[Webhook Registration] Raw response text:", response.text)
-
     except requests.RequestException as req_err:
         print("[Webhook Registration] Request failed:", req_err)
 
-
-# -------------------------------
-# Handle order_updated webhook
-# -------------------------------
 
 @csrf_exempt
 def order_updated(request):
     """
     Endpoint to receive Shopify 'orders/updated' webhook.
     Only saves purchase when financial_status == 'paid'.
-    Includes detailed debugging.
     """
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
-    # --- DEBUG: Log all headers ---
+    # --- DEBUG: Log Headers & Body ---
     print("[Webhook Debug] Headers:", dict(request.headers))
-
-    # --- DEBUG: Log raw body safely ---
     try:
         body_text = request.body.decode()
         print("[Webhook Debug] Raw body:", body_text)
@@ -259,10 +315,7 @@ def order_updated(request):
         # Parse JSON
         data = {}
         if body_text:
-            try:
-                data = json.loads(body_text)
-            except json.JSONDecodeError as json_err:
-                print("[Webhook Debug] Failed to parse JSON:", json_err)
+            data = json.loads(body_text)
 
         # Get shop
         shop_domain = request.headers.get("X-Shopify-Shop-Domain")
@@ -283,7 +336,7 @@ def order_updated(request):
         order_id = data.get("id")
         line_items = data.get("line_items", [])
 
-        print(f"[Webhook] Paid order {order_id} from email={email}, phone={phone} in {shop_domain}")
+        print(f"[Webhook] Paid order {order_id} from {shop_domain}")
 
         for item in line_items:
             product_id = item.get("product_id")
@@ -301,15 +354,12 @@ def order_updated(request):
                     usage_duration_days=usage_days,
                     domain=shop_domain,
                 )
-                print(f"[Webhook] ✅ Saved purchase: {product_name} ({usage_days} days) "
-                    f"for email={email}, phone={phone}, domain={shop_domain}")
+                print(f"[Webhook] ✅ Saved purchase: {product_name} ({usage_days} days)")
             else:
-                print(f"[Webhook] ⚠️ Skipped saving {product_name} — usage_duration={usage_days}")
-
+                print(f"[Webhook] ⚠️ Skipped {product_name} — usage_duration=0")
 
     except Exception as e:
         print("[Orders/Updated Webhook] Exception:", e)
-        import traceback
         traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=500)
 
