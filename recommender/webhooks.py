@@ -364,3 +364,102 @@ def order_updated(request):
         return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"status": "ok"}, status=200)
+
+# ======================================================
+# SHOP UPDATE WEBHOOK (Handle Domain/Email Changes)
+# ======================================================
+@csrf_exempt
+def shop_updated(request):
+    """
+    Handles Shopify 'shop/update' webhook.
+    Updates the local Shop model when the merchant changes their
+    Primary Domain, Shop Name, or Email in Shopify settings.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    # 1. Verify HMAC
+    hmac_header = request.headers.get("X-Shopify-Hmac-Sha256")
+    if not hmac_header or not verify_webhook(request.body, hmac_header):
+        print("[Shop Update] HMAC verification failed")
+        return JsonResponse({"error": "Invalid webhook"}, status=401)
+
+    # 2. Parse Data
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        
+        # The 'myshopify_domain' is our unique ID in the database
+        myshopify_domain = data.get("myshopify_domain") 
+        
+        # The 'domain' field in the webhook is the "Primary Domain" (e.g., www.brand.com)
+        new_primary_domain = data.get("domain")
+        new_shop_name = data.get("name")
+        new_email = data.get("email")
+        
+        print(f"[Shop Update] Received update for {myshopify_domain}")
+
+        # 3. Update Database
+        shop_obj = Shop.objects.filter(domain=myshopify_domain).first()
+        
+        if shop_obj:
+            updated = False
+            
+            # Check for changes and update fields if necessary
+            if shop_obj.custom_domain != new_primary_domain:
+                shop_obj.custom_domain = new_primary_domain
+                updated = True
+                print(f" -> Updating custom_domain to: {new_primary_domain}")
+
+            if shop_obj.shop_name != new_shop_name:
+                shop_obj.shop_name = new_shop_name
+                updated = True
+                print(f" -> Updating shop_name to: {new_shop_name}")
+
+            if shop_obj.email != new_email:
+                shop_obj.email = new_email
+                updated = True
+                print(f" -> Updating email to: {new_email}")
+
+            if updated:
+                shop_obj.save()
+                print("[Shop Update] Database updated successfully.")
+            else:
+                print("[Shop Update] No changes detected.")
+        else:
+            print(f"[Shop Update] Warning: Shop {myshopify_domain} not found in DB.")
+
+        return JsonResponse({"status": "ok"}, status=200)
+
+    except Exception as e:
+        print(f"[Shop Update] Error processing webhook: {e}")
+        return JsonResponse({"error": "Server error"}, status=500)
+
+
+def register_shop_update_webhook(shop_domain, access_token):
+    """
+    Registers the 'shop/update' webhook.
+    """
+    url = f"https://{shop_domain}/admin/api/2025-07/webhooks.json"
+    headers = {
+        "X-Shopify-Access-Token": access_token,
+        "Content-Type": "application/json"
+    }
+    # Update this address to match your live URL + the path defined in urls.py
+    webhook_address = f"{settings.BASE_URL}/webhooks/shop_updated/"
+    
+    data = {
+        "webhook": {
+            "topic": "shop/update",
+            "address": webhook_address,
+            "format": "json"
+        }
+    }
+
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        if response.status_code == 201:
+             print(f"[Webhook Registration] 'shop/update' registered successfully for {shop_domain}")
+        else:
+             print(f"[Webhook Registration] 'shop/update' registration failed: {response.text}")
+    except Exception as e:
+        print("[Webhook Registration] Exception registering shop/update:", str(e))

@@ -24,7 +24,7 @@ from recommender.AImodels.segment_skin_conditions_yolo import segment_skin_condi
 
 from .models import FaceAnalysis, Feedback, Visitor, Shop, PageContent, Purchase
 # Added register_gdpr_webhooks to imports
-from .webhooks import register_uninstall_webhook, fetch_usage_duration, register_orders_updated_webhook, register_gdpr_webhooks
+from .webhooks import register_uninstall_webhook, fetch_usage_duration, register_orders_updated_webhook, register_gdpr_webhooks, register_shop_update_webhook
 from .shopify_navigation import create_page
 
 # Load from environment variables with fallback
@@ -516,6 +516,9 @@ def oauth_callback(request):
 
         # --- Register orders/paid webhook for notification system (KEPT LOCAL LOGIC) ---
         register_orders_updated_webhook(shop, offline_token)
+
+        # --- NEW: Register Shop Update Webhook (Syncs domain changes) ---
+        register_shop_update_webhook(shop, offline_token)
 
         # Render install page (metafield creation now manual)
         return render(
